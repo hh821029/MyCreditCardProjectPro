@@ -22,6 +22,7 @@
 - [ ] 驗證設定：確保 `configs/` 內的規則檔在分離後仍能被正確讀取。
 - [ ] 流程測試：執行 `main.py` 確保 `refiner` 邏輯運作正常且未被破壞。
 - [ ] 排除敏感資訊：確保 `data/` 或 `output/` 目錄下的個人帳單資訊未被列入 stage。
+    - 注意：`configs/` 目錄下包含個人資料的檔案（如 `dim_cards.csv`）應已被 `.gitignore` 排除，請再次確認。
 
 ## 5. 待辦與優化項目 (Backlog)
 - [ ] 整理日後待更新的解析器 (Parsers) 清單。
@@ -32,7 +33,7 @@
 針對影響資料處理流程（Data Pipeline）的核心更動（如：重構、配置分離、Parser 邏輯更新），必須遵循以下「雙軌驗證」流程：
 1. **並行實作**：新邏輯應先以「註解狀態」加入 `main.py` 或核心模組，保持舊邏輯為 Active。
 2. **基準測試 (Baseline)**：執行舊邏輯，記錄或備份輸出結果（如 `result_old.csv`）。
-3. **對比測試 (Comparison)**：交換註解狀態，讓新邏輯 Active 並執行，記錄結果（如 `result_new.csv`）。
+3. **對比測試 (Comparison)**：交換註解狀態，讓新邏輯 Activebing 並執行，記錄結果（如 `result_new.csv`）。
 4. **內容比對**：使用比對工具（如 PowerShell `Compare-Object` 或內容雜湊值）確認兩份結果是否 100% 完全相同。
 5. **決策原則**：
     - **完全一致**：正式移除舊邏輯與註解，完成變更。

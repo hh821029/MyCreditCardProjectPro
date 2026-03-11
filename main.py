@@ -30,6 +30,13 @@ except ImportError:
     print("⚠️ 尚未建立 loaders.sqlite_loader，將跳過資料庫載入步驟")
     SQLiteLoader = None
 
+# 5. [新加入] 引入配置載入器
+try:
+    from loaders.config_loader import ConfigLoader
+except ImportError:
+    print("⚠️ 尚未建立 loaders.config_loader，Config 載入將維持舊邏輯")
+    ConfigLoader = None
+
 
 # ==========================================
 # 設定日誌 (Logging)
@@ -136,8 +143,18 @@ def run_etl_pipeline():
     if DataRefiner:
         try:
             logger.info("🔧 啟動 Refiner 進行商業邏輯清洗...")
-            # 初始化 Refiner (傳入設定檔路徑)
-            refiner = DataRefiner(config_dir=CONFIG_DIR)
+            
+            # 透過 ConfigLoader 預先載入所有設定規則
+            if ConfigLoader:
+                configs = {
+                    'merchants': ConfigLoader.load_config(CONFIG_DIR, 'dim_merchants', strategy='append'),
+                    'gateways': ConfigLoader.load_config(CONFIG_DIR, 'dim_payment_gateway', strategy='append'),
+                    'txn_types': ConfigLoader.load_yaml(CONFIG_DIR, 'transaction_types.yaml')
+                }
+                refiner = DataRefiner(config_dir=CONFIG_DIR, configs=configs)
+            else:
+                # 備援邏輯（若 Loader 載入失敗）
+                refiner = DataRefiner(config_dir=CONFIG_DIR)
             
             # 執行清洗
             final_df = refiner.process(merged_df)

@@ -10,11 +10,12 @@ from .classifier import TransactionClassifier
 logger = logging.getLogger(__name__)
 
 class DataRefiner:
-    def __init__(self, config_dir: str):
-        self.mapper = CardMapper(config_dir)
-        self.merchant_normalizer = MerchantNormalizer(config_dir)
-        self.payment_tagger = PaymentGatewayTagger(config_dir)
-        self.classifier = TransactionClassifier(config_dir)
+    def __init__(self, config_dir: str, configs: dict = None):
+        configs = configs or {}
+        self.mapper = CardMapper(config_dir) # Mapper 之後再處理，先維持原樣
+        self.merchant_normalizer = MerchantNormalizer(config_dir, rules=configs.get('merchants'))
+        self.payment_tagger = PaymentGatewayTagger(config_dir, rules=configs.get('gateways'))
+        self.classifier = TransactionClassifier(config_dir, config=configs.get('txn_types'))
 
     def process(self, df: pd.DataFrame) -> pd.DataFrame:
         if df.empty: return df

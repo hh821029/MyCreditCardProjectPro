@@ -10,29 +10,13 @@ logger = logging.getLogger(__name__)
 class TransactionClassifier:
     """
     [交易分類器]
-    負責根據 transaction_types.yaml 定義的關鍵字，對交易進行分類。
-    處理順序 (Priority):
-    1. 繳款 (Payment)
-    2. 折抵/紅利 (Credits)  <-- 新增
-    3. 費用 (Fees)
-    4. 退刷 (Refunds)
-    5. 國外交易 (Foreign)
-    6. 一般交易 (General)
+    負責根據傳入的配置規則，對交易進行分類。
     """
-    def __init__(self, config_dir: str):
-        self.config_file = os.path.join(config_dir, 'transaction_types.yaml')
-        self.config = self._load_config()
-
-    def _load_config(self):
-        if not os.path.exists(self.config_file):
-            logger.warning(f"⚠️ 找不到交易分類設定: {self.config_file}")
-            return {}
-        try:
-            with open(self.config_file, 'r', encoding='utf-8') as f:
-                return yaml.safe_load(f)
-        except Exception as e:
-            logger.error(f"❌ 讀取交易分類設定失敗: {e}")
-            return {}
+    def __init__(self, config_dir: str, config: dict = None):
+        """
+        :param config: 由外部注入的配置字典 (來自 transaction_types.yaml)
+        """
+        self.config = config if config is not None else {}
 
     def process(self, df: pd.DataFrame) -> pd.DataFrame:
         if df.empty: return df
@@ -45,9 +29,9 @@ class TransactionClassifier:
 
         # 依序執行分類標記 (一旦標記，後續步驟就不會覆蓋)
         df = self._mark_payment(df)
-        df = self._mark_credits(df)   # [新增] 標記紅利/折抵
+        df = self._mark_credits(df)   
         df = self._mark_fees(df)
-        df = self._mark_refunds(df)   # 退刷判斷放在這，避免誤判繳款或紅利為退刷
+        df = self._mark_refunds(df)   
         df = self._mark_foreign(df)
         df = self._mark_general(df)
 
@@ -73,7 +57,7 @@ class TransactionClassifier:
         return df
 
     def _mark_credits(self, df: pd.DataFrame) -> pd.DataFrame:
-        """2. [新增] 標記紅利與折抵 (來自 credit_keywords)"""
+        """2. 標記紅利與折抵 (來自 credit_keywords)"""
         keywords = self.config.get('credit_keywords', [])
         if not keywords: return df
         
@@ -83,7 +67,6 @@ class TransactionClassifier:
         
         target_mask = mask_empty & mask_keyword
         if target_mask.any():
-            # 統一標記為 '紅利折抵'，與 parser 階段的國泰/玉山處理保持一致
             df.loc[target_mask, const.COL_TXN_TYPE] = '紅利折抵'
             
         return df
@@ -114,7 +97,6 @@ class TransactionClassifier:
         else:
             return df
 
-        # 強制轉型，避免字串比對報錯
         numeric_amounts = pd.to_numeric(df[amount_col], errors='coerce')
         mask_negative = numeric_amounts < 0
         
@@ -150,7 +132,6 @@ class TransactionClassifier:
         """6. 剩下的標記為一般交易或驗證/零元"""
         mask_empty = self._get_mask_empty_type(df)
         
-        # 排除空值並確認非零
         numeric_amounts = pd.to_numeric(df[const.COL_PAY_AMOUNT], errors='coerce').fillna(0)
         mask_nonzero = numeric_amounts != 0
         

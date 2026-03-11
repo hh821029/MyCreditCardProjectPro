@@ -4,6 +4,7 @@ output/
 __pycache__/
 .venv/
 *.DS_Store
+.gemini
 
 # 保留範例檔
 !data/example_*.csv
@@ -18,14 +19,18 @@ __pycache__/
 *.xlsx
 *.db
 Himitsu.py
-configs/cards.csv
-configs/merchants.csv
-configs/*(維度表).csv
-configs/*(橋接表).csv
+configs/dim_cards.csv
+configs/dim_merchants.csv
+configs/dim_merchants_private.csv
+configs/dim_card_rewards_base.csv
+configs/dim_card_rewards_campaigns.csv
+configs/bridge_cube_selections.csv
+configs/bridge_reward_rules.csv
 output/result_*.csv
 processors/*_set.py
 analytics/*_set.py
-output/
+
+
 
 
 # 忽略分析結果檔、分析過程產生的中間檔

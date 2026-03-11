@@ -76,23 +76,25 @@ def calculate_rolling_rewards(df_bills: pd.DataFrame, rules_df: pd.DataFrame) ->
     針對正常交易，依時間排序後套用規則，並計算回饋上限。
     """
     # 確保依據卡號與時間排序，以正確計算累積值
-    df_bills = df_bills.sort_values(by=['card_id', 'transaction_datetime'])
+    # Bills.db 欄位: card_no, transaction_date
+    df_bills = df_bills.sort_values(by=['card_no', 'transaction_date'])
     
-    # 追蹤累積回饋的字典：{(card_id, rule_id, year_month): accumulated_amount}
+    # 追蹤累積回饋的字典：{(card_no, rule_id, year_month): accumulated_amount}
     accumulated_rewards = {}
     
     for idx, row in df_bills.iterrows():
         if row['is_bypassed']:
             continue
             
-        transaction_amount = float(row['transaction_amount'])
+        # Bills.db 欄位: payment_amount, merchant_name, transaction_date
+        payment_amount = float(row['payment_amount'])
         merchant_name = str(row['merchant_name'])
-        txn_datetime = pd.to_datetime(row['transaction_datetime'])
-        txn_month = txn_datetime.strftime('%Y-%m')
-        card_id = row['card_id']
+        txn_date = pd.to_datetime(row['transaction_date'])
+        txn_month = txn_date.strftime('%Y-%m')
+        card_no = row['card_no']
         
-        # 篩選該卡片適用的規則
-        card_rules = rules_df[rules_df['Card_ID'] == card_id]
+        # 篩選該卡片適用的規則 (規則表假設有 Card_No 欄位)
+        card_rules = rules_df[rules_df['Card_No'] == card_no]
         
         applied = False
         for _, rule in card_rules.iterrows():
@@ -103,17 +105,17 @@ def calculate_rolling_rewards(df_bills: pd.DataFrame, rules_df: pd.DataFrame) ->
             rate = float(rule['Rate'])
             cap = float(rule['Cap'])
             
-            # 1. 檢查時間是否在規則生效期內 (支援活動提前額滿)
-            if not (start_time <= txn_datetime <= end_time):
+            # 1. 檢查時間是否在規則生效期內
+            if not (start_time <= txn_date <= end_time):
                 continue
                 
             # 2. 檢查通路 Regex 匹配
             if re.search(rule_regex, merchant_name):
                 # 計算預期回饋
-                expected_reward = transaction_amount * (rate / 100.0)
+                expected_reward = payment_amount * (rate / 100.0)
                 
                 # 取得當月該規則已累積金額
-                key = (card_id, rule_id, txn_month)
+                key = (card_no, rule_id, txn_month)
                 current_accumulated = accumulated_rewards.get(key, 0.0)
                 
                 # 計算剩餘額度並截斷

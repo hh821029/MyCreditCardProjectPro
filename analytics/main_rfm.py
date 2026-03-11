@@ -39,9 +39,9 @@ MATRIX_WINDOWS = [
 # ==========================================
 def clean_merchant_prefix(df: pd.DataFrame, config_dir: str) -> pd.DataFrame:
     """
-    讀取 payment_gateway.csv，將 merchant_name 欄位中的前綴詞拔除
+    讀取 dim_payment_gateway.csv，將 merchant_name 欄位中的前綴詞拔除
     """
-    gateway_file = os.path.join(config_dir, 'payment_gateway.csv')
+    gateway_file = os.path.join(config_dir, 'dim_payment_gateway.csv')
     if not os.path.exists(gateway_file):
         logger.warning(f"⚠️ 找不到 {gateway_file}，略過前綴拔除處理。")
         return df
@@ -58,9 +58,6 @@ def clean_merchant_prefix(df: pd.DataFrame, config_dir: str) -> pd.DataFrame:
         # 組裝 Regex (使用 re.escape 保護特殊字元)
         escaped_prefixes = [re.escape(p) for p in prefixes]
         pattern = r'^(' + r'|'.join(escaped_prefixes) + r')'
-        
-        # 備份原始名稱 (除錯用，可省略)
-        # df['_original_merchant'] = df['merchant_name']
         
         # 執行 Regex 替換並去除可能留下的空白
         df['merchant_name'] = df['merchant_name'].str.replace(pattern, '', regex=True).str.strip()
@@ -105,13 +102,13 @@ def run_analytics():
     df_raw = clean_merchant_prefix(df_raw, config_dir)
 
     # [動態補回 Category] 
-    merchants_config_path = os.path.join(config_dir, 'merchants.csv')
+    merchants_config_path = os.path.join(config_dir, 'dim_merchants.csv')
     if os.path.exists(merchants_config_path):
         df_merchants = pd.read_csv(merchants_config_path, dtype=str)
         category_map = dict(zip(df_merchants['Replacement'], df_merchants['Category']))
         df_raw['category'] = df_raw['merchant_name'].map(category_map).fillna('未分類')
     else:
-        logger.warning("⚠️ 找不到 merchants.csv，所有交易將標記為 '未分類'")
+        logger.warning("⚠️ 找不到 dim_merchants.csv，所有交易將標記為 '未分類'")
         df_raw['category'] = '未分類'
 
     logger.info(f"✅ 成功載入 {len(df_raw)} 筆交易資料，並已動態掛載分類。")

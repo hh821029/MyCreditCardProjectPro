@@ -1,4 +1,4 @@
-﻿Pattern,Category,Prefix_Label,Priority,說明,欄位定義解說
+Pattern,Category,Prefix_Label,Priority,說明,欄位定義解說
 (?i)(?:連加|連支|Ｌｉｎｅ.*ｐａｙ|LINE.*PAY|ＬＰＥＰＩ|LPEPI),Line Pay,LinePay－,25,連加支付&連加電子支付,Pattern：關鍵字或正則表達式
 (?i)(?:街口|JKOPAY),JKOPay,JKOPAY－,25,街口支付,Category：第三方支付電子支付種類
 (?i)(?:icash.*Pay|ｉｃａｓｈ.*ｐａｙ|ICP|ＩＣＰ),icash Pay,ICP－,25,愛金卡支付，有票證的電子支付,Order：處理順序

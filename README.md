@@ -22,37 +22,6 @@
 
 ---
 
-## 🚀 核心功能 (Key Features)
-
-## 🏗️ 系統架構 (System Architecture)
-
-本系統採用 **Y 型資料流 (Forked Data Flow)** 設計，區分「真實分析」與「開源展示」兩條路徑：
-
-```mermaid
-graph TD
-    %% Styles
-    classDef private fill:#e3f2fd,stroke:#1565c0,stroke-width:2px;
-    classDef demo fill:#fff3e0,stroke:#e65100,stroke-width:2px,stroke-dasharray: 5 5;
-
-    subgraph Personal_Routine ["🔒 Private: Local Analysis"]
-        Raw["Raw CSVs"] -->|"Extract"| ETL("etl.py")
-        ETL -->|"Transform"| Refine("refine.py")
-        Refine -->|"Load"| DB[("SQLite Database")]
-        DB -->|"Query"| RFM["Financial Reports"]
-    end
-
-    subgraph Demo_Generation ["🌍 Public: Open Source Demo"]
-        Refine -.->|"Read Schema"| Gen("generate_mock.py")
-        Himitsu("Himitsu.py") -.->|"Inject Mapping Rules"| Gen
-        Gen ==>|"Export"| Mock["examples/data.csv"]
-    end
-
-    class Raw,DB,RFM private;
-    class Gen,Himitsu,Mock demo;
-    
-```
-
-
 ### 流程
    1. Extract (提取)：main.py 掃描 data/ 資料夾，利用 get_parser 自動識別銀行，透過 parsers/ 將 PDF/CSV 轉為一致的 STANDARD_COLUMNS 格式。
    2. Transform (清洗)：
@@ -103,23 +72,24 @@ My-Credit-Card-ETL/
 │   ├── merchant.py             # 商家名稱清洗與正規化
 │   └── mapper.py               # 欄位對應處理
 │
-├── loaders/               # [持久層] 負責資料儲存
-│   └── sqlite_loader.py   # 將清洗後的資料匯入 SQLite (Bills.db)
+├── loaders/                    # [載入層] 負責資料儲存、載入設定檔資料
+│   ├──sqlite_loader.py         # 將清洗後的資料匯入 SQLite (Bills.db) 
+│   └──config_loader.py         # 將相關的設定資料匯入主程式執行
 │
-├── analytics/             # [分析層] 負責進階數據建模
-│   ├── main_rfm.py        # RFM 分析主流程
-│   ├── rfm_modules.py     # RFM 計算引擎 (Merchant/Payment/Card)
-│   └── rewards_calculator.py # (設置中) 回饋金計算邏輯
+├── analytics/                  # [分析層] 負責進階數據建模
+│   ├── main_rfm.py             # RFM 分析主流程
+│   ├── rfm_modules.py          # RFM 計算引擎 (Merchant/Payment/Card)
+│   └── rewards_calculator.py   # (設置中) 回饋金計算邏輯
 │
-├── configs/                    # [設定檔資料夾] 
-│   ├── cards.csv               # [設定檔] 真實卡號放置地點(已在 .gitignore)
-│   ├── transaction_types.yaml  # [設定檔] 銀行交易類別，排除持卡人跟銀行的交易像繳款、折抵/回饋、費用(手續費/服務費)(公開)
-│   ├── merchants.csv           # [設定檔] 真實交易地點，使用Regex(正則表達式)-Replacement來清洗消費明細(已在 .gitignore)
-│   ├── payment_gateway.csv     # [設定檔] 電子支付平台，使用Regex(正則表達式)-Replacement來整理支付通路(公開)
-│   ├── (維度表).csv            # [設定檔] (設置中，已在 .gitignore) 
-│   ├── (維度表).csv            # [設定檔] (設置中，已在 .gitignore)
-│   ├── (橋接表).csv            # [設定檔] (設置中，已在 .gitignore)
-│   └── Cube權益切換(橋接表).csv # [設定檔] (設置中，已在 .gitignore)
+├── configs/                        # [設定檔資料夾] 
+│   ├── dim_cards.csv                   # [設定檔] 真實卡號放置地點(已在 .gitignore)
+│   ├── transaction_types.yaml          # [設定檔] 銀行交易類別，排除持卡人跟銀行的交易像繳款、折抵/回饋、費用(手續費/服務費)(公開)
+│   ├── dim_merchants.csv               # [設定檔] 真實交易地點，使用Regex(正則表達式)-Replacement來清洗消費明細(已在 .gitignore)
+│   ├── dim_payment_gateway.csv         # [設定檔] 電子支付平台，使用Regex(正則表達式)-Replacement來整理支付通路(公開)
+│   ├── dim_card_rewards_base.csv       # [設定檔] 基本回饋設定(已在 .gitignore )
+│   ├── dim_card_rewards_campaigns.csv  # [設定檔] 消費活動回饋設定(已在 .gitignore)
+│   ├── bridge_reward_rules.csv         # [設定檔] 基本回饋設定橋接表(已在 .gitignore)
+│   └── bridge_cube_selections.csv      # [設定檔] Cube權益切換橋接表(已在 .gitignore)
 │
 ├── data/                       # [帳單csv放置處] 真實的 CSV 帳單放這邊。
 │   └── (各銀行帳單)
@@ -127,9 +97,7 @@ My-Credit-Card-ETL/
 
 ```
 
-
 ---
-
 
 ## 🚀 專案路線圖與待辦 (Roadmap)
 
@@ -139,16 +107,24 @@ My-Credit-Card-ETL/
 ### 支援銀行擴充
 - [x] **玉山銀行**：已完整支援 (含 e.Point 折抵處理、多卡號歸戶邏輯)
 - [x] **國泰世華**：已完整支援 (含 Cube 卡多卡號歸戶邏輯)
-- [x] **中國信託**：已完整支援
-- [x] **華南銀行**：已完整支援 (含 副檔名 偽裝)
+- [x] **中國信託**：已完整支援 
+- [x] **華南銀行**：已完整支援 (含 副檔名偽裝、多卡號歸戶邏輯)
 - [X] **永豐銀行**：已完整支援
 - [ ] **台新銀行**：徵求 CSV 格式樣本 (Help Wanted)
 - [ ] **台北富邦**：徵求 CSV 格式樣本 (Help Wanted)
 
 ## 📅 開發日記 (Dev Log)
 
+* **2026-03-12**
+   * 行為準則建立：完成 GEMINI.md，定義編碼規範、架構完整性保護，以及最核心的「核心變更驗證規範 (Refactoring Protocol)」。
+   * 配置載入器實作：建立 loaders/config_loader.py，支援多重編碼嘗試 (UTF-8 → Big5 → cp950) 與 Append/Replace 讀取策略。
+   * 核心架構解耦：
+       * 重構 main.py：將設定檔讀取邏輯從處理器移至進入點。
+       * 重構 processors/ (merchant.py, classifier.py, refiner.py)：改為注入式規則架構，不再內部讀檔。
+   * 穩定性驗證：透過 A/B 測試比對 result_old.csv 與 result_new.csv，確認重構前後處理結果 100% 完全一致。
+
 * **2026-03-07**
-    * 大幅度調整專案架構，暫時撤下Mock Data Generator (generate_mock.py) 與隱私分流架構 (Himitsu.py)。
+    * 大幅度調整專案架構，撤下Mock Data Generator (generate_mock.py) 與隱私分流架構 (Himitsu.py)。
     * 重構專案檔案命名因應調整專案架構 (parser資料夾，和資料夾內的所有檔名) 。
     * 開始撰寫回饋計算邏輯
 

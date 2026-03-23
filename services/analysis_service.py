@@ -1,22 +1,26 @@
-# analytics/main_rfm.py
+# services/analysis_service.py
 import sqlite3
 import pandas as pd
 import os
 import logging
-import re  # [新增] 處理 Regex 需要的套件
-from . import rfm_modules
+import re
+from analytics import rfm_modules
 
-# 初始化日誌
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+# ==========================================
+# 設定日誌 (Logging)
+# ==========================================
 logger = logging.getLogger(__name__)
 
 # ==========================================
-# 1. 路徑與全局配置
+# 核心路徑設定 (相對於專案根目錄)
 # ==========================================
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+SERVICE_DIR = os.path.dirname(os.path.abspath(__file__))
+BASE_DIR = os.path.dirname(SERVICE_DIR)
+
 OUTPUT_DIR = os.path.join(BASE_DIR, 'output')
 DB_PATH = os.path.join(OUTPUT_DIR, 'Bills.db')
 MATRIX_DIR = os.path.join(OUTPUT_DIR, 'matrix')
+CONFIG_DIR = os.path.join(BASE_DIR, 'configs')
 
 os.makedirs(MATRIX_DIR, exist_ok=True)
 
@@ -35,7 +39,7 @@ MATRIX_WINDOWS = [
 ]
 
 # ==========================================
-# [新增] 前處理函式：拔除支付前綴
+# 前處理函式：拔除支付前綴
 # ==========================================
 def clean_merchant_prefix(df: pd.DataFrame, config_dir: str) -> pd.DataFrame:
     """
@@ -98,11 +102,10 @@ def run_analytics():
     df_raw['payment_amount'] = pd.to_numeric(df_raw['payment_amount'], errors='coerce').fillna(0)
     
     # [關鍵安插點]：在進行 Category Mapping 之前，先還原乾淨的商家名稱
-    config_dir = os.path.join(BASE_DIR, 'configs')
-    df_raw = clean_merchant_prefix(df_raw, config_dir)
+    df_raw = clean_merchant_prefix(df_raw, CONFIG_DIR)
 
     # [動態補回 Category] 
-    merchants_config_path = os.path.join(config_dir, 'dim_merchants.csv')
+    merchants_config_path = os.path.join(CONFIG_DIR, 'dim_merchants.csv')
     if os.path.exists(merchants_config_path):
         df_merchants = pd.read_csv(merchants_config_path, dtype=str)
         category_map = dict(zip(df_merchants['Replacement'], df_merchants['Category']))
@@ -163,6 +166,3 @@ def run_analytics():
         logger.error(f"❌ 寫入過程發生錯誤: {e}", exc_info=True)
 
     logger.info("🎉 全部分析完成！你的財務數據已準備就緒。")
-
-if __name__ == "__main__":
-    run_analytics()

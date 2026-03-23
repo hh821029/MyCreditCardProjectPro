@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MyCreditCardProjectPro 控制台</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #f4f7f6;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .container {
+            width: 100%;
+            max-width: 1000px;
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+        }
+        h1 {
+            color: #2c3e50;
+            margin-bottom: 25px;
+            text-align: center;
+        }
+        .button-group {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin-bottom: 25px;
+        }
+        button {
+            padding: 12px 24px;
+            font-size: 16px;
+            font-weight: 600;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            background-color: #3498db;
+            color: white;
+        }
+        button:hover {
+            background-color: #2980b9;
+            transform: translateY(-1px);
+        }
+        button:disabled {
+            background-color: #bdc3c7;
+            cursor: not-allowed;
+            transform: none;
+        }
+        .btn-secondary {
+            background-color: #95a5a6;
+        }
+        .btn-secondary:hover {
+            background-color: #7f8c8d;
+        }
+        .console {
+            background-color: #1e1e1e;
+            color: #d4d4d4;
+            padding: 20px;
+            border-radius: 8px;
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+            height: 600px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            font-size: 14px;
+            line-height: 1.5;
+            border: 1px solid #333;
+        }
+        .log-info { color: #569cd6; }
+        .log-warning { color: #ce9178; }
+        .log-error { color: #f44747; }
+        .log-success { color: #4ec9b0; }
+        
+        #status {
+            margin-top: 15px;
+            font-weight: bold;
+            text-align: center;
+            height: 24px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>MyCreditCardProjectPro 控制台</h1>
+        
+        <div class="button-group">
+            <button id="btnEtl" onclick="runTask('etl')">🚀 執行 ETL 流程</button>
+            <button id="btnAnalysis" onclick="runTask('analytics')">📊 執行 RFM 分析</button>
+            <button id="btnRewards" onclick="runTask('rewards')">💰 計算回饋</button>
+            <button id="btnClear" class="btn-secondary" onclick="clearConsole()">🧹 清空日誌</button>
+        </div>
+
+        <div id="status">目前狀態：閒置</div>
+        <div id="console" class="console">--- 等待指令啟動 ---</div>
+    </div>
+
+    <script>
+        let eventSource = null;
+
+        function appendLog(message) {
+            const consoleDiv = document.getElementById('console');
+            const span = document.createElement('span');
+            
+            // 關鍵字著色
+            if (message.includes('INFO')) span.className = 'log-info';
+            else if (message.includes('WARNING')) span.className = 'log-warning';
+            else if (message.includes('ERROR')) span.className = 'log-error';
+            
+            // 成功符號與重點符號著色
+            if (message.includes('✅') || message.includes('🎉') || message.includes('✨') || message.includes('💰') || message.includes('成功')) {
+                span.className = 'log-success';
+            }
+
+            span.textContent = message + '\n';
+            consoleDiv.appendChild(span);
+            
+            // 自動捲動到底部
+            consoleDiv.scrollTop = consoleDiv.scrollHeight;
+        }
+
+        function clearConsole() {
+            document.getElementById('console').innerHTML = '--- 控制台已清空 ---\n';
+        }
+
+        function runTask(type) {
+            if (eventSource) {
+                eventSource.close();
+            }
+
+            const btnEtl = document.getElementById('btnEtl');
+            const btnAnalysis = document.getElementById('btnAnalysis');
+            const btnRewards = document.getElementById('btnRewards');
+            const statusDiv = document.getElementById('status');
+
+            // 鎖定按鈕
+            btnEtl.disabled = true;
+            btnAnalysis.disabled = true;
+            if(btnRewards) btnRewards.disabled = true;
+
+            statusDiv.textContent = `目前狀態：正在執行 ${type.toUpperCase()}...`;
+            statusDiv.style.color = '#e67e22';
+            
+            appendLog(`\n[${new Date().toLocaleTimeString()}] >>>>> 啟動 ${type.toUpperCase()} 任務 <<<<<`);
+
+            const url = `/api/run/${type}`;
+            eventSource = new EventSource(url);
+
+            eventSource.onmessage = function(event) {
+                appendLog(event.data);
+            };
+
+            eventSource.onerror = function(err) {
+                console.log("Stream ended or error occurred.");
+                eventSource.close();
+                eventSource = null;
+                
+                // 解鎖按鈕
+                btnEtl.disabled = false;
+                btnAnalysis.disabled = false;
+                if(btnRewards) btnRewards.disabled = false;
+
+                statusDiv.textContent = `目前狀態：${type.toUpperCase()} 任務結束`;
+                statusDiv.style.color = '#27ae60';
+                appendLog(`[${new Date().toLocaleTimeString()}] <<<<< ${type.toUpperCase()} 任務完成 >>>>>\n`);
+            };
+        }
+    </script>
+</body>
+</html>

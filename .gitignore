@@ -5,6 +5,8 @@ __pycache__/
 .venv/
 *.DS_Store
 .gemini
+my_first_server/
+server.py
 
 # 保留範例檔
 !data/example_*.csv
@@ -19,8 +21,8 @@ __pycache__/
 *.xlsx
 *.db
 Himitsu.py
-configs/dim_cards.csv
-configs/dim_merchants.csv
+configs/dim_cards_private.csv
+configs/dim_merchants_set.csv
 configs/dim_merchants_private.csv
 configs/dim_card_rewards_base.csv
 configs/dim_card_rewards_campaigns.csv

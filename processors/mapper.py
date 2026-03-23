@@ -8,31 +8,45 @@ import re
 logger = logging.getLogger(__name__)
 
 class CardMapper:
-    def __init__(self, config_dir: str):
-        self.mapping_file = os.path.join(config_dir, 'dim_cards.csv') 
-        self.rules = self._load_rules()
+    def __init__(self, config_dir: str, rules: pd.DataFrame = None):
+        if rules is not None and not rules.empty:
+            self.rules = self._preprocess_rules(rules)
+            logger.info(f"✅ CardMapper 已由外部載入 {len(self.rules)} 條規則")
+        else:
+            try:
+                from loaders.config_loader import ConfigLoader
+                df = ConfigLoader.load_config(config_dir, 'dim_cards', strategy='replace')
+                self.rules = self._preprocess_rules(df)
+                logger.info(f"✅ CardMapper 透過 ConfigLoader 載入 {len(self.rules)} 條規則")
+            except ImportError:
+                logger.warning("⚠️ 無法載入 ConfigLoader，改用基礎讀取邏輯")
+                self.mapping_file = os.path.join(config_dir, 'dim_cards.csv') 
+                self.rules = self._load_legacy_rules()
 
-    def _load_rules(self):
-        """讀取並預處理規則"""
-        if not os.path.exists(self.mapping_file):
-            logger.warning(f"⚠️ 找不到卡片對照表: {self.mapping_file}，將跳過歸戶邏輯")
-            return pd.DataFrame()
-
+    def _preprocess_rules(self, df: pd.DataFrame) -> pd.DataFrame:
+        """清洗並預處理傳入的規則 DataFrame"""
+        if df.empty:
+            return df
+            
         try:
-            # 讀取時不指定 dtype，讓 pd.read_csv 自動讀取後我們再手動清洗
-            df = pd.read_csv(self.mapping_file, keep_default_na=False)
-            
-            # 1. 清洗欄位名稱
             df.columns = df.columns.astype(str).str.strip()
-            
-            # 2. 清洗資料內容 (轉為字串、去空白、去除 .0)
             for col in df.columns:
                 df[col] = df[col].astype(str).str.strip()
-                # 特別針對 Card_No 欄位再做一次 .0 的徹底清除
-                if col == 'Card_No':
+                if col in ['Card_No', '代換前卡號']:
                     df[col] = df[col].str.replace(r'\.0$', '', regex=True)
-                
+                    df[col] = df[col].str.replace(' ', '', regex=False)
             return df
+        except Exception as e:
+            logger.error(f"❌ 預處理卡片對照規則失敗: {e}")
+            return pd.DataFrame()
+
+    def _load_legacy_rules(self):
+        """[備援] 舊版讀取邏輯"""
+        if not hasattr(self, 'mapping_file') or not os.path.exists(self.mapping_file):
+            return pd.DataFrame()
+        try:
+            df = pd.read_csv(self.mapping_file, keep_default_na=False)
+            return self._preprocess_rules(df)
         except Exception as e:
             logger.error(f"❌ 讀取卡片對照表失敗: {e}")
             return pd.DataFrame()
@@ -41,46 +55,56 @@ class CardMapper:
         """
         核心邏輯：
         1. 絕對粉碎機：清洗卡號 (去除 .0 與空白)
-        2. 精準比對：依據 dim_cards.csv 設定
-        3. 嚴格寫入：標記卡別、行動支付、摘要前綴
+        2. 精準唯一比對：每一行規則僅有一個 Match Key (代換前卡號優先)
+        3. 帳務排除：針對手續費、利息、折抵等非消費交易，不予標記行動支付標籤
         """
         if df.empty or const.COL_CARD_NO not in df.columns:
             return df
             
         # ==========================================
-        # 1. 原始資料裝甲清洗 (絕對粉碎機)
+        # 1. 原始資料清洗
         # ==========================================
-        # 確保 df 中的卡號也是乾淨的 (去除 .0, 空白)
         df[const.COL_CARD_NO] = df[const.COL_CARD_NO].astype(str).str.strip()
         df[const.COL_CARD_NO] = df[const.COL_CARD_NO].str.replace(r'\.0$', '', regex=True)
         df[const.COL_CARD_NO] = df[const.COL_CARD_NO].str.replace(' ', '')
         
-        # 準備暫存的清洗 Series 用於比對 (避免多次計算)
-        df_card_clean = df[const.COL_CARD_NO]
+        df_card_clean = df[const.COL_CARD_NO].copy()
 
-        # 預先準備好 Mobile Payment 欄位
         if const.COL_MOBILE_PAY not in df.columns:
             df[const.COL_MOBILE_PAY] = '' 
         else:
             df[const.COL_MOBILE_PAY] = df[const.COL_MOBILE_PAY].fillna('')
 
-        # 準備 Mobile Payment 的清洗版 (用於判斷是否為空，避免覆蓋)
         df_mobile_clean = df[const.COL_MOBILE_PAY].astype(str).str.strip()
         df_mobile_clean = df_mobile_clean.replace({'nan': '', 'None': ''})
 
         # ==========================================
-        # 2. 規則比對 (Config-Driven)
+        # 2. 帳務紀錄識別 (排除 Mask)
+        # ==========================================
+        exclude_keywords = ['手續費', '利息', '年費', '回饋', '繳款', '紅利折抵', '小樹點折抵', '退貨', '沖正']
+        exclude_pattern = '|'.join(exclude_keywords)
+        is_account_record = df[const.COL_MERCHANT].astype(str).str.contains(exclude_pattern, na=False)
+
+        # ==========================================
+        # 3. 規則比對 (精準唯一模式)
         # ==========================================
         for _, rule in self.rules.iterrows():
-            # (A) 取得規則中的比對卡號
             target_card = rule.get('Card_No', '')
-            if not target_card or target_card.lower() == 'nan': 
+            original_card = rule.get('代換前卡號', '')
+            
+            # --- 決定比對標的 (Match Key) ---
+            # 如果規則有寫「代換前卡號」(如 2902/1500)，則只用它來比對。
+            # 只有當規則沒有寫代換前卡號時，才用 Card_No (如 2902) 來比對。
+            # 這能防止資料中的 2902 誤匹配到 2902/1500 的規則。
+            match_key = original_card if (pd.notna(original_card) and original_card != '' and original_card.lower() != 'nan') else target_card
+            
+            if not match_key:
                 continue
             
-            # 建立比對 Mask
-            mask = (df_card_clean == target_card)
+            # 精準比對 (Exact Matching)
+            mask = (df_card_clean == match_key)
             
-            # (B) Bank ID 篩選 (對應 Bank_Name 欄位)
+            # 銀行名稱篩選 (雙重保險)
             target_bank = rule.get('Bank_Name', '')
             if target_bank and target_bank.lower() != 'nan':
                 if const.COL_BANK_NAME in df.columns:
@@ -89,28 +113,35 @@ class CardMapper:
             if not mask.any():
                 continue
 
-            # --- 寫入邏輯 ---
+            # ==========================================
+            # 4. 寫入與正規化
+            # ==========================================
             
-            # 1. 卡別 (Card Type) -> 對應 Card_Type
+            # (A) 卡號正規化與卡別 (不受排除清單影響，所有該卡交易皆需歸戶)
+            df.loc[mask, const.COL_CARD_NO] = target_card
+            
             val_type = rule.get('Card_Type')
             if pd.notna(val_type) and str(val_type).lower() != 'nan':
                 df.loc[mask, const.COL_CARD_TYPE] = str(val_type).strip()
 
-            # 2. 行動支付 (Mobile Payment) -> 對應 行動支付標籤
-            val_mobile = rule.get('行動支付標籤')
-            if pd.notna(val_mobile) and str(val_mobile).lower() != 'nan':
-                mobile_str = str(val_mobile).strip()
-                # 策略：填空不覆蓋
-                is_empty = mask & (df_mobile_clean == '')
-                if is_empty.any():
-                    df.loc[is_empty, const.COL_MOBILE_PAY] = mobile_str
-                    df_mobile_clean.loc[is_empty] = mobile_str
+            # (B) 行動支付標籤與前綴 (僅套用於「非帳務性」交易)
+            eligible_mask = mask & (~is_account_record)
+            
+            if eligible_mask.any():
+                # 行動支付標籤
+                val_mobile = rule.get('行動支付標籤')
+                if pd.notna(val_mobile) and str(val_mobile).lower() != 'nan':
+                    mobile_str = str(val_mobile).strip()
+                    is_empty = eligible_mask & (df_mobile_clean == '')
+                    if is_empty.any():
+                        df.loc[is_empty, const.COL_MOBILE_PAY] = mobile_str
+                        df_mobile_clean.loc[is_empty] = mobile_str
 
-            # 3. 前綴詞 (Prefix) -> 對應 加在消費明細摘要前方
-            val_prefix = rule.get('加在消費明細摘要前方')
-            if pd.notna(val_prefix) and str(val_prefix).lower() != 'nan':
-                prefix_str = str(val_prefix).strip()
-                if prefix_str:
-                    df.loc[mask, '_Temp_Prefix'] = prefix_str
+                # 前綴詞 (Temp_Prefix)
+                val_prefix = rule.get('加在消費明細摘要前方')
+                if pd.notna(val_prefix) and str(val_prefix).lower() != 'nan':
+                    prefix_str = str(val_prefix).strip()
+                    if prefix_str:
+                        df.loc[eligible_mask, '_Temp_Prefix'] = prefix_str
         
         return df

@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 class DataRefiner:
     def __init__(self, config_dir: str, configs: dict = None):
         configs = configs or {}
-        self.mapper = CardMapper(config_dir) # Mapper 之後再處理，先維持原樣
+        self.mapper = CardMapper(config_dir, rules=configs.get('cards'))
         self.merchant_normalizer = MerchantNormalizer(config_dir, rules=configs.get('merchants'))
         self.payment_tagger = PaymentGatewayTagger(config_dir, rules=configs.get('gateways'))
         self.classifier = TransactionClassifier(config_dir, config=configs.get('txn_types'))

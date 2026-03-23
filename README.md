@@ -14,11 +14,23 @@
 在個人財務分析中，跨銀行帳單整合常面臨 **非結構化數據 (Unstructured Data)** 與 **隱私安全** 的雙重挑戰。
 傳統的手動記帳或 Excel 公式維護存在以下痛點：
 
-* **Data Consistency:** 商家名稱混亂（如 `7-ELEVEN`, `7-11`），導致消費類別難以歸戶。
-* **Scalability:** 隨著帳戶增加，手動校對回饋係數與格式的時間成本呈指數級上升。
-* **Privacy Risks:** 依賴雲端記帳軟體可能導致財務隱私外洩。
+* **Data Consistency:** 支付通路或商家名稱會因為相關商業行為跟法規要求而變更，導致消費明細多樣化難以整理。
+* **Scalability:** 隨著信用卡張數、回饋規則變動等各種因素，觀察商家消費狀態、校對回饋狀態、格式整理的時間成本和資料儲存量呈幾何增長。
+* **Privacy Risks:** 依賴雲端記帳軟體可能導致財務隱私外洩，使用AI開啟電子帳單會有個人資料隱私外洩風險。需要一個可顧及隱私處理的方案。
+   * * **Zero-Cloud Logic：**所有帳單解析與資料庫儲存均在本地端完成，不上傳至任何雲端 API。  
+   * * **Rule Segregation：**將包含個人資訊的規則（如卡號、特定商家定位等）與通用邏輯分離，確保代碼庫可安全地進行版本控制。
+
 
 本專案構建了一個 **Local-First ETL Pipeline**，將原始 CSV 帳單清洗並標準化，存入本地 SQLite 資料庫以支援 **RFM 模型** 與 **回饋最佳化** 分析。
+
+---
+
+## 🚀 快速上手 (Quick Start)
+
+   1. **環境設定**：`pip install -r requirements.txt`
+   2. **準備資料**：將銀行 CSV 帳單明細匯出後，放入 `data/` 資料夾。
+   3. **啟動分析介面**：`python -m api.server` (訪問 http://localhost:5000)
+   4. **執行 ETL**：透過 Web 介面點擊執行，或手動執行 `python main.py`。
 
 ---
 
@@ -27,7 +39,9 @@
    2. Transform (清洗)：
        * classifier.py 根據 configs/ 中的規則自動判斷交易類型。
        * 移除支付前綴（如 LINEPAY*），還原乾淨的商家名稱以利後續分析。
-   3. Load (儲存)：sqlite_loader.py 將乾淨的交易紀錄寫入 output/Bills.db。
+   3. Load (寫入)：
+       * sqlite_loader.py 將乾淨的交易紀錄寫入 output/Bills.db。
+       * config_loader.py 將公開設定和私人設定依據資料載入規則，採取附加模式或取代模式寫入各階段需要引用設定的規則。
    4. Analyze (分析)：analytics/ 模組讀取資料庫，產出：
        * 商家 RFM：哪些店是你最常去且花最多的？
        * 信用卡 RFM：哪張卡是你的主力消費卡？
@@ -41,8 +55,8 @@
 本專案採用 **AI 輔助開發 (AI-Assisted Development)** 模式，結合人類架構師的邏輯與 LLM 的算力。
 
 * **Architecture (人類主導):** 定義資料流 (Data Flow)、Schema 設計、隱私邊界與商業目標。
-* **Implementation (AI 加速):** 利用 Vibe Coding 模式快速生成繁瑣的 Regex 規則與 Pandas 語法。本專案使用Gemini Pro模型生成。
-* **Verification (嚴格審查):** 所有生成代碼皆經過人工 Code Review，並通過真實數據的邏輯驗證。透過提示詞要求變數命名不可任意變動。
+* **Implementation (AI 加速):** 本專案使用Gemini Pro模型生成 Pandas 語法，整理繁瑣的 Regex 規則和形成解析器樣板，大幅提升開發效率。
+* **Verification (嚴格審查):** 所有生成代碼皆經過 Code Review，並通過真實數據的邏輯校驗（A/B Testing），確保前後產出一致性；同時嚴格規範變數命名，維持代碼庫的穩定與可讀性。
 
 ---
 
@@ -77,14 +91,14 @@ My-Credit-Card-ETL/
 │   └──config_loader.py         # 將相關的設定資料匯入主程式執行
 │
 ├── analytics/                  # [分析層] 負責進階數據建模
-│   ├── main_rfm.py             # RFM 分析主流程
+│   ├── run_rfm.py              # RFM 分析執行腳本
 │   ├── rfm_modules.py          # RFM 計算引擎 (Merchant/Payment/Card)
-│   └── rewards_calculator.py   # (設置中) 回饋金計算邏輯
+│   └── run_rewards.py          # 回饋金計算執行腳本
 │
 ├── configs/                        # [設定檔資料夾] 
-│   ├── dim_cards.csv                   # [設定檔] 真實卡號放置地點(已在 .gitignore)
+│   ├── dim_cards.csv                   # [設定檔] 真實卡號放置地點(已提供可直接讀取的範例檔)
 │   ├── transaction_types.yaml          # [設定檔] 銀行交易類別，排除持卡人跟銀行的交易像繳款、折抵/回饋、費用(手續費/服務費)(公開)
-│   ├── dim_merchants.csv               # [設定檔] 真實交易地點，使用Regex(正則表達式)-Replacement來清洗消費明細(已在 .gitignore)
+│   ├── dim_merchants.csv               # [設定檔] 真實交易地點，使用Regex(正則表達式)-Replacement來清洗消費明細(部分公開)
 │   ├── dim_payment_gateway.csv         # [設定檔] 電子支付平台，使用Regex(正則表達式)-Replacement來整理支付通路(公開)
 │   ├── dim_card_rewards_base.csv       # [設定檔] 基本回饋設定(已在 .gitignore )
 │   ├── dim_card_rewards_campaigns.csv  # [設定檔] 消費活動回饋設定(已在 .gitignore)
@@ -96,6 +110,11 @@ My-Credit-Card-ETL/
 └── output/                     # [輸出區] 存放 Bills.db 與 分析報表 (已在 .gitignore)
 
 ```
+附註：
+實際使用的資料依據config_loader.py設定的讀取狀態來處理資料。
+dim_cards.csv可作為樣板自行修改。
+dim_merchants.csv直接更新在欄位下方就好。
+
 
 ---
 
@@ -115,6 +134,10 @@ My-Credit-Card-ETL/
 
 ## 📅 開發日記 (Dev Log)
 
+* **2026-03-21**
+   * 專案架構調整，新增前端頁面以便傳送請求
+   * 僅使用本機端，不連網以符合個人使用情境
+
 * **2026-03-12**
    * 行為準則建立：完成 GEMINI.md，定義編碼規範、架構完整性保護，以及最核心的「核心變更驗證規範 (Refactoring Protocol)」。
    * 配置載入器實作：建立 loaders/config_loader.py，支援多重編碼嘗試 (UTF-8 → Big5 → cp950) 與 Append/Replace 讀取策略。
@@ -124,17 +147,19 @@ My-Credit-Card-ETL/
    * 穩定性驗證：透過 A/B 測試比對 result_old.csv 與 result_new.csv，確認重構前後處理結果 100% 完全一致。
 
 * **2026-03-07**
-    * 大幅度調整專案架構，撤下Mock Data Generator (generate_mock.py) 與隱私分流架構 (Himitsu.py)。
-    * 重構專案檔案命名因應調整專案架構 (parser資料夾，和資料夾內的所有檔名) 。
+    * 專案架構調整，並同步整理檔案命名 (parser資料夾，和資料夾內的所有檔名) 。
+    * 分散parser，從一條線處理轉成依據各銀行帳單格式進行模組呼叫。
     * 開始撰寫回饋計算邏輯
 
 * **2026-02-07**
-    * 建立 Mock Data Generator (generate_mock.py) 與隱私分流架構 (Himitsu.py)。
+    * 撤下 Mock Data Generator (generate_mock.py) 與隱私分流架構 (Himitsu.py)。
     * 重構專案檔案命名 (merchants.csv, payment_gateway.csv) 以符合工程慣例。
     * RFM記錄邏輯上傳。
     * 支付規則(Regex)上傳，整理商家規則(Regex)中。
+    * 更新Git歷史紀錄
 
 * **2026-02-02**
+    * 建立 Mock Data Generator (generate_mock.py) 與隱私分流架構 (Himitsu.py)。
     * 開始分離EXCEL回饋紀錄邏輯跟跟RFM紀錄邏輯
 
 * **2026-02-01**

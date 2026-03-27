@@ -1,8 +1,0 @@
-﻿Bank_Name,Card_Type,代換前卡號,行動支付標籤,加在消費明細摘要前方,Card_No,備註
-ctbc_bank,LINE Pay卡,**** 4321,LinePay,LinePay－,4321,[Mock] LinePay聯名卡
-cube_bank,CUBE卡,**** 0000,ApplePay,ApplePay－,0000,[Mock] 權益切換卡
-sinopac_bank,DAWHO現金回饋信用卡,**** 1688,GooglePay,GooglePay－,1688,[Mock] 現金無腦回饋卡
-ctbc_bank,Uniopen聯名卡,**** 0711,,,0711,[Mock] 統一集團生態圈聯名卡
-esun_bank,U bear卡,**** 5413,,,5413,[Mock] 無腦網購卡
-esun_bank,Unicard,**** 1313,LinePay,LinePay－,1313,[Mock] 自選權益卡
-

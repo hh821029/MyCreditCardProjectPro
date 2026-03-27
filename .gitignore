@@ -54,3 +54,6 @@ spending_matrix_result.csv
 # 忽略 Python 產生的快取 (常見的垃圾)
 __pycache__/
 *.pyc
+# 測試??��??����??
+configs/dim_cards.csv
+configs/dim_merchants.csv

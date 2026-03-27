@@ -34,7 +34,53 @@
 
 ---
 
-### 流程
+### 系統架構與資料流程 (System Architecture)
+    本專案採用服務化架構 (Service-Oriented Architecture)，透過 ETL流程將原始帳單轉換為結構化資料，並結合維度配置進行 RFM 分析與回饋計算。
+
+```mermaid
+
+graph TB
+    subgraph service
+        subgraph configs["維度配置 (Dimension Tables)"]
+            E_dim_card_source["卡片維度表<br/>(dim_cards.csv)"]
+            E_dim_merchant_source["商家維度表<br/>(dim_merchants.csv)"]
+            E_dim_reward_rule_source["回饋規則設定表<br/>(YAML/CSV)"]
+            end
+                
+        subgraph DB_service ["帳單資料庫化(ETL)"]
+            E_Bill_source["帳單原始資料<br/>(CSV、PDF、XLS、XLSX等)"] --> ETL_Logic["ETL處理邏輯<br/>(Regex/清洗/整合)"]
+            ETL_Logic --> E_DB["帳單資料庫(SQlite)"]
+            end
+
+        subgraph RFM_analysis ["RFM分析"]
+            E_DB -->RFM_Logic["RFM分析提取<br/>(邏輯規則分群)<br/>"]
+            RFM_Logic --> E_RFM["多視角RFM報表<br/>(商家、電子支付、信用卡)"]
+            end		
+
+        subgraph Reward_Calculation ["回饋計算(實作中)"]
+            E_DB -->Reward_Engine["引入一般消費定義<br/>活動回饋條件設定<br/>"]
+            Reward_Engine --> E_Reward["回饋計算結果"]
+            E_RFM --> E_Reward_Analysis["回饋計算分析(待實作)"]
+            E_Reward --> E_Reward_Analysis
+            end
+            
+        E_dim_merchant_source -.->|"提供名詞對照與正規化"| ETL_Logic  
+        E_dim_card_source -.->|"關聯卡號與銀行"| ETL_Logic
+        E_dim_card_source -.->|"提供結帳日/回饋主體"| Reward_Engine   
+        E_dim_reward_rule_source -.->|"定義百分比/排除條件"|Reward_Engine
+        end
+
+                
+    subgraph API_view["應用程式介面"]
+        E_API["Web Console/API"]
+        E_API -->|"觸發服務<br/>"| service
+
+        end 
+
+```
+
+   * 
+
    1. Extract (提取)：main.py 掃描 data/ 資料夾，利用 get_parser 自動識別銀行，透過 parsers/ 將 PDF/CSV 轉為一致的 STANDARD_COLUMNS 格式。
    2. Transform (清洗)：
        * classifier.py 根據 configs/ 中的規則自動判斷交易類型。
@@ -72,6 +118,9 @@ My-Credit-Card-ETL/
 ├── main.py                     # [入口點] 核心 ETL 流程控制器
 ├── const.py                    # [規範] 全域欄位定義與資料型態 (Single Source of Truth)
 │   
+├── api/
+│   └── server.py               # [本機端伺服器] 
+│  
 ├── parsers/                    # [解析層] 負責各銀行原始帳單轉為標準 DataFrame
 │   ├── base.py                 # Parser 基類，定義統一介面
 │   ├── cathay.py               # 國泰世華 (csv) 解析邏輯
@@ -87,6 +136,7 @@ My-Credit-Card-ETL/
 │   └── mapper.py               # 欄位對應處理
 │
 ├── loaders/                    # [載入層] 負責資料儲存、載入設定檔資料
+│   ├──schema_enforcer.py       # 匯入型別規則已確認資料型態是否指定，阻止針對資料型態的預測
 │   ├──sqlite_loader.py         # 將清洗後的資料匯入 SQLite (Bills.db) 
 │   └──config_loader.py         # 將相關的設定資料匯入主程式執行
 │
@@ -133,6 +183,11 @@ dim_merchants.csv直接更新在欄位下方就好。
 - [ ] **台北富邦**：徵求 CSV 格式樣本 (Help Wanted)
 
 ## 📅 開發日記 (Dev Log)
+
+* **2026-03-27**
+   * 回饋計算流程建立，內容設定調整中
+   * 資料型態定義法律化：定義輸入輸出的資料型態，解決資料型態衝突報錯的問題。
+   * 帳單月份標籤實作：透過帳單資訊產生帳單月標籤定位回饋原始資料，降低維護成本。
 
 * **2026-03-21**
    * 專案架構調整，新增前端頁面以便傳送請求

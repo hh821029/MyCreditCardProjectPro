@@ -3,6 +3,7 @@ import pandas as pd
 import yaml
 import logging
 from typing import Optional, Union, Dict, Any
+from loaders.schema_enforcer import SchemaEnforcer
 
 logger = logging.getLogger(__name__)
 
@@ -50,21 +51,25 @@ class ConfigLoader:
         else:
             logger.warning(f"⚠️ 找不到基礎設定檔: {base_file}")
 
+        # 若無私有檔，直接對基礎檔執法並回傳
         if not os.path.exists(private_file):
-            return df_base
+            return SchemaEnforcer.enforce(df_base)
 
         # 處理私有檔
         df_private = cls._read_csv_with_encoding(private_file)
         if df_private.empty:
-            return df_base
+            return SchemaEnforcer.enforce(df_base)
 
+        # 根據策略決定最終 DataFrame
         if strategy.lower() == 'replace':
             logger.info(f"🔄 使用 Replace 策略：{base_name}_private 取代基礎檔")
-            return df_private
+            final_df = df_private
         else:
             logger.info(f"➕ 使用 Append 策略：合併 {base_name} 與 {base_name}_private")
-            # 簡單合併，後續可根據需求加入去重邏輯
-            return pd.concat([df_base, df_private], ignore_index=True)
+            final_df = pd.concat([df_base, df_private], ignore_index=True)
+
+        # 統一執行型別執法
+        return SchemaEnforcer.enforce(final_df)
 
     @classmethod
     def load_yaml(cls, config_dir: str, file_name: str) -> Dict[str, Any]:

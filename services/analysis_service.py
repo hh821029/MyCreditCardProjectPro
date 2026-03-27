@@ -143,20 +143,7 @@ def run_analytics():
     logger.info("💾 儲存分析結果...")
     
     try:
-        with sqlite3.connect(DB_PATH) as conn:
-            if not df_merchant.empty:
-                df_merchant.to_sql('analysis_rfm_merchant', conn, if_exists='replace', index=False)
-                logger.info("   ✅ [DB] 資料表更新完成: analysis_rfm_merchant")
-                
-            if not df_payment.empty:
-                df_payment.to_sql('analysis_rfm_payment', conn, if_exists='replace', index=False)
-                logger.info("   ✅ [DB] 資料表更新完成: analysis_rfm_payment")
-                
-            if not df_card.empty:
-                df_card.to_sql('analysis_rfm_card', conn, if_exists='replace', index=False)
-                logger.info("   ✅ [DB] 資料表更新完成: analysis_rfm_card")
-
-        # 寫入 Matrix CSVs
+        # 僅產出 Matrix CSVs 報表，不再回灌資料庫 (遵循變更方向)
         for filename, df_matrix in matrix_results:
             csv_path = os.path.join(MATRIX_DIR, filename)
             df_matrix.round(2).to_csv(csv_path, encoding='utf-8-sig')

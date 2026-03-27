@@ -52,19 +52,21 @@ class SQLiteLoader:
             const.COL_TXN_DATE: 'transaction_date',
             const.COL_POST_DATE: 'posting_date',
             const.COL_CONV_DATE: 'conversion_date',
+            const.COL_STAT_MON: 'statement_month',      # 帳單月份
             const.COL_BANK_NAME: 'bank_name',
-            const.COL_CARD_TYPE: 'card_name',     # 配合舊有習慣
-            const.COL_CARD_NO: 'card_no',
-            const.COL_MERCHANT: 'merchant_name',  # 配合舊有習慣
-            const.COL_LOCATION: 'merchant_location',
+            const.COL_CARD_TYPE: 'card_name',           # 卡別
+            const.COL_CARD_NO: 'card_no',               # 卡號末四碼
+            const.COL_MERCHANT: 'merchant_name',        # 商家名稱
+            const.COL_LOCATION: 'merchant_location',    # 消費地
             const.COL_CONSUMPTION_PLACE: 'consumption_place',
             const.COL_TXN_TYPE: 'transaction_type',
             const.COL_MOBILE_PAY: 'mobile_payment',
-            const.COL_CATEGORY: 'category',       # [新增] V2 加入的分類欄位
+            const.COL_CATEGORY: 'category',             # 商業分類欄位
+            const.COL_SUB_CATEGORY: 'sub_category',     # 商業次分類欄位
             const.COL_CURRENCY: 'currency_type',
             const.COL_CURR_AMOUNT: 'currency_amount',
             const.COL_PAY_CURR: 'payment_currency',
-            const.COL_PAY_AMOUNT: 'payment_amount'
+            const.COL_PAY_AMOUNT: 'payment_amount',
 
 
         }
@@ -125,7 +127,7 @@ class SQLiteLoader:
         df_final['transaction_id'] = df_db['transaction_id']
 
         # 3. 處理日期欄位，將 Pandas Timestamp 轉為純字串，避免 SQLite 報錯
-        date_cols = ['transaction_date', 'posting_date', 'conversion_date']
+        date_cols = ['transaction_date', 'posting_date', 'conversion_date', 'statement_month']
         for col in date_cols:
             if col in df_final.columns:
                 # 轉為 'YYYY-MM-DD' 格式，若為空值則轉為 NaT

@@ -1,45 +1,70 @@
 # const.py
 
 # ==========================================
-# 1. 欄位名稱常數 (Single Source of Truth)
+# 1. 交易資料欄位 (Transactions)
 # ==========================================
 # 這些是我們希望在最終 CSV 看到的標準欄位名稱
+
+# 交易日期資訊
 COL_TXN_DATE = 'Transaction_Date'           # 交易日
 COL_POST_DATE = 'Posting_Date'              # 入帳日
+COL_CONV_DATE = 'Conversion_Date'          # 外幣折算日
+COL_STAT_MON = 'Statement_Month'            # 帳單月份 (通常格式 YYYY-MM-01)
+
+# 商店消費資訊
 COL_MERCHANT = 'Merchant'                   # 交易說明/特店名稱
 COL_LOCATION = 'Merchant_Location'          # 消費地 (國別)
 COL_CONSUMPTION_PLACE = 'Consumption_Place' # (玉山專用) 原始消費地
-COL_CONV_DATE = 'Conversion_Date'           # 外幣折算日
+COL_MOBILE_PAY = 'Mobile_Payment'           # 行動支付註記
+COL_TXN_TYPE = 'Transaction_Type'           # 交易類別 (一般) 繳款、轉帳...
+COL_CATEGORY = "Category"                   # 消費類別 (食衣住行...)
+COL_SUB_CATEGORY = "Sub_Category"           # 消費次類別 (點心、速食...)
+
+# 消費金額資訊
 COL_CURRENCY = 'Currency_Type'              # 原始幣別
 COL_AMOUNT = 'Amount'                       # 交易金額 (通用)
 COL_CURR_AMOUNT = 'Currency_Amount'         # 外幣金額
 COL_PAY_AMOUNT = 'Payment_Amount'           # 台幣應繳金額
 COL_PAY_CURR = 'Payment_Currency'           # 繳款幣別
+
+# 卡片資訊
+COL_BANK_NAME = 'Bank_Name'                 # 銀行代碼
 COL_CARD_NO = 'Card_No'                     # 卡號末四碼
 COL_CARD_TYPE = 'Card_Type'                 # 卡別 (正/附)
-COL_TXN_TYPE = 'Transaction_Type'           # 交易類別 (一般)
+
+# 其他資訊
 COL_INS_PLN = 'Installment_Plan'            # 分期數(分期專用，預設為1代表不分期)
-COL_MOBILE_PAY = 'Mobile_Payment'           # 行動支付註記
-COL_BANK_NAME = 'Bank_Name'                 # 銀行代碼
-COL_CATEGORY = "Category"                   # 消費類別 (食衣住行...)
-COL_SUB_CATEGORY = "Sub_Category"           # 消費次類別 (點心、速食...)
 
 
 # ==========================================
-# 2. 標準輸出欄位順序 (Schema Definition)
+# 2. 回饋規則欄位 (Rewards Configs) - [新增]
 # ==========================================
-# 所有 Parser 輸出時，建議依照此順序排列 (或至少包含這些欄位)
+COL_RULE_NAME = 'Rule_Name'                 # 規則名稱 (如: 基礎回饋、網購加碼)
+COL_START_DATE = 'Start_Date'               # 適用起始日
+COL_END_DATE = 'End_Date'                   # 適用結束日
+COL_REWARD_RATE = 'Reward_Rate'             # 回饋比率 (如 0.01)
+COL_CAP_AMOUNT = 'Cap_Amount'               # 回饋上限金額
+COL_CALC_METHOD = 'Calc_Method'             # 計算策略 (PER_ITEM / AGGREGATE)
+COL_CONDITION = 'Condition'                 # 條件標籤 (或 Regex 規則)
+COL_TARGET_CARD = 'Target_Card'             # 目標卡號 (用於規則對齊)
+COL_TARGET_BANK = 'Target_Bank'             # 目標銀行
+
+
+# ==========================================
+# 3. 標準輸出欄位順序 (Schema Definition)
+# ==========================================
 STANDARD_COLUMNS = [
-    COL_TXN_DATE, COL_POST_DATE, COL_MERCHANT, COL_LOCATION, 
+    COL_TXN_DATE, COL_POST_DATE, COL_STAT_MON, 
+    COL_MERCHANT, COL_LOCATION, 
     COL_CURRENCY, COL_CURR_AMOUNT, COL_CONV_DATE, 
     COL_PAY_AMOUNT, COL_PAY_CURR,
     COL_TXN_TYPE, COL_INS_PLN, COL_MOBILE_PAY, 
     COL_CARD_NO, COL_CARD_TYPE, COL_BANK_NAME
-
 ]
 
+
 # ==========================================
-# 3. 銀行關鍵字對照 (用來分派 Parser)
+# 4. 銀行關鍵字對照 (用來分派 Parser)
 # ==========================================
 BANK_KEYWORD_MAP = {
     '玉山': 'esun',
@@ -49,39 +74,46 @@ BANK_KEYWORD_MAP = {
     '永豐': 'sinopac', 'DAWAY': 'sinopac'
 }
 
+
 # ==========================================
-# 4. 資料型別定義 (Schema Definition)
+# 5. 統一型別定義表 (The Law / Schema)
 # ==========================================
-# 用於 BaseParser 統一強制轉型，避免 pd.concat 發生警告
+# 用於 BaseParser 或 Enforcer 統一強制轉型
 # 格式: { 欄位名: '目標型別' }
 
 COLUMN_TYPES = {
-    # --- 數值區 (會強制轉為 float，處理逗號) ---
+    # --- 數值區 (Float) ---
     COL_AMOUNT: 'float',
-    COL_CURR_AMOUNT: 'float',   # 消費金額，一般國外交易和台幣跨境交易時會有值
-    COL_PAY_AMOUNT: 'float',    # 繳款金額，通常是台幣金額，或是外幣交易的原幣金額
+    COL_CURR_AMOUNT: 'float',
+    COL_PAY_AMOUNT: 'float',
+    COL_REWARD_RATE: 'float',
+    COL_CAP_AMOUNT: 'float',
 
-    # --- 字串區 (會強制轉為 string，並保留 None) ---
-    # ----- 商店消費關聯 -----
-    COL_MERCHANT: 'str',        # 交易說明/特店名稱
-    COL_LOCATION: 'str',        # 消費地 (國別)
-    COL_CONSUMPTION_PLACE: 'str',   # 消費地補充
-    COL_MOBILE_PAY: 'str',      # 行動支付標記 (LinePay、ApplePay...)
-    COL_CATEGORY: 'str',        # 消費分類
-    COL_SUB_CATEGORY: 'str',    # 消費次分類
-    # ----- 消費幣別關聯 -----
-    COL_CURRENCY: 'str',        # 消費幣別
-    COL_PAY_CURR: 'str',        # 繳款幣別
-    # ----- 卡片資訊 -----
-    COL_CARD_NO: 'str',         # 卡號末四碼，必須是字串
-    COL_CARD_TYPE: 'str',       # 卡片類別
-    COL_BANK_NAME: 'str',       # 銀行名稱 (用來分派 Parser，或是後續分析用)
-    # ----- 其他 -----
-    COL_TXN_TYPE: 'str',        # 交易類別 (一般、繳款、轉帳...)
-    COL_INS_PLN: 'str',         # 分期期數通常當字串處理較方便 (e.g. "3/12")
+    # --- 字串區 (String) ---
+    COL_MERCHANT: 'str',
+    COL_LOCATION: 'str',
+    COL_CONSUMPTION_PLACE: 'str',
+    COL_MOBILE_PAY: 'str',
+    COL_CATEGORY: 'str',
+    COL_SUB_CATEGORY: 'str',
+    COL_CURRENCY: 'str',
+    COL_PAY_CURR: 'str',
+    COL_CARD_NO: 'str',
+    COL_CARD_TYPE: 'str',
+    COL_BANK_NAME: 'str',
+    COL_TXN_TYPE: 'str',
+    COL_INS_PLN: 'str',
+    COL_RULE_NAME: 'str',
+    COL_CALC_METHOD: 'str',
+    COL_CONDITION: 'str',
+    COL_TARGET_CARD: 'str',
+    COL_TARGET_BANK: 'str',
 
-    # --- 日期區 (主要由 transform_common_dates 處理，這裡僅作標記) ---
-    COL_TXN_DATE: 'date',       # 交易日
-    COL_POST_DATE: 'date',      # 入帳日
-    COL_CONV_DATE: 'date'       # 外幣折算日
+    # --- 日期區 (Date/Timestamp) ---
+    COL_TXN_DATE: 'date',
+    COL_POST_DATE: 'date',
+    COL_CONV_DATE: 'date',
+    COL_STAT_MON: 'date',
+    COL_START_DATE: 'date',
+    COL_END_DATE: 'date'
 }

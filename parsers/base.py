@@ -125,17 +125,21 @@ class BaseBillParser:
         """
         統一將標準欄位中的日期字串轉換為 Timestamp
         **自動帶入檔名中的年份**
+        **並自動注入帳單月份標籤 (Statement_Month)**
         **並自動移除日期無效的雜訊行 (Garbage Collection)**
         """
         base_year, bill_month = self._get_bill_period(filepath)
         
-        if base_year:
-            # 可以在這裡 print log 確認是否有抓對年份
-            # logger.info(f"檔名年份偵測: {os.path.basename(filepath)} -> {base_year}/{bill_month}")
-            pass
+        # --- [新增] 注入帳單月份標籤 ---
+        # 這是路徑 A 的核心：直接從檔名賦予該批交易「財務月份歸屬」
+        if base_year and bill_month:
+            # 統一定義為該月 1 號，方便後續與回饋規則對齊 (格式: YYYY-MM-01)
+            df[const.COL_STAT_MON] = pd.Timestamp(year=base_year, month=bill_month, day=1)
         else:
-            logger.warning(f"⚠️ 無法從檔名識別年份，日期解析可能會有誤: {os.path.basename(filepath)}")
+            df[const.COL_STAT_MON] = pd.NaT
+            logger.warning(f"⚠️ 無法從檔名識別年份/月份，帳單月份標籤將為空: {os.path.basename(filepath)}")
 
+        # --- [原有] 日期解析邏輯 ---
         target_cols = [const.COL_TXN_DATE, const.COL_POST_DATE, const.COL_CONV_DATE]
         
         for col in target_cols:

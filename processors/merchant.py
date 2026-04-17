@@ -22,12 +22,15 @@ class MerchantNormalizer:
         if self.rules.empty or df.empty: return df
 
         if const.COL_CATEGORY not in df.columns: df[const.COL_CATEGORY] = None
+        # 確保 Merchant_Display 存在，初始值等於原始 Merchant
+        if const.COL_MERCHANT_DISPLAY not in df.columns:
+            df[const.COL_MERCHANT_DISPLAY] = df[const.COL_MERCHANT]
         
         merchants = df[const.COL_MERCHANT].astype(str).str.strip()
         
         for _, rule in self.rules.iterrows():
             pattern = rule['Pattern']
-            replacement = rule['Replacement']
+            replacement = rule['Merchant']  # 更名為 Merchant
             category = rule['Category']
             
             if pd.isna(pattern) or pattern == '': continue
@@ -41,7 +44,8 @@ class MerchantNormalizer:
                 target_mask = mask & df[const.COL_CATEGORY].isna()
                 if target_mask.any():
                     if pd.notna(replacement) and replacement != '':
-                        df.loc[target_mask, const.COL_MERCHANT] = replacement
+                        # 修改 Merchant_Display 而非 Merchant
+                        df.loc[target_mask, const.COL_MERCHANT_DISPLAY] = replacement
                     if pd.notna(category) and category != '':
                         df.loc[target_mask, const.COL_CATEGORY] = category
         return df

@@ -9,7 +9,7 @@ payment_keywords:
   - '本行扣繳'
   - '網銀行動繳'
   - 'ATM轉帳'
-  - '匯款'
+  - '自扣'  
   - 'Payment Thank You'
 
 # 2. 折抵/紅利關鍵字 (銀行 -> 使用者)

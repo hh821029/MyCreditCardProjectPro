@@ -12,7 +12,8 @@ COL_CONV_DATE = 'Conversion_Date'          # 外幣折算日
 COL_STAT_MON = 'Statement_Month'            # 帳單月份 (通常格式 YYYY-MM-01)
 
 # 商店消費資訊
-COL_MERCHANT = 'Merchant'                   # 交易說明/特店名稱
+COL_MERCHANT = 'Merchant'                   # (清洗前)交易說明/特店名稱
+COL_MERCHANT_DISPLAY = 'Merchant_Display'   # (清洗後)交易說明/特店名稱
 COL_LOCATION = 'Merchant_Location'          # 消費地 (國別)
 COL_CONSUMPTION_PLACE = 'Consumption_Place' # (玉山專用) 原始消費地
 COL_MOBILE_PAY = 'Mobile_Payment'           # 行動支付註記
@@ -30,7 +31,7 @@ COL_PAY_CURR = 'Payment_Currency'           # 繳款幣別
 # 卡片資訊
 COL_BANK_NAME = 'Bank_Name'                 # 銀行代碼
 COL_CARD_NO = 'Card_No'                     # 卡號末四碼
-COL_CARD_TYPE = 'Card_Type'                 # 卡別 (正/附)
+COL_CARD_TYPE = 'Card_Type'                 # 卡別(卡片名稱，目前無正附卡區分，後續可從規則定義中拆解)
 
 # 其他資訊
 COL_INS_PLN = 'Installment_Plan'            # 分期數(分期專用，預設為1代表不分期)
@@ -55,7 +56,7 @@ COL_TARGET_BANK = 'Target_Bank'             # 目標銀行
 # ==========================================
 STANDARD_COLUMNS = [
     COL_TXN_DATE, COL_POST_DATE, COL_STAT_MON, 
-    COL_MERCHANT, COL_LOCATION, 
+    COL_MERCHANT, COL_MERCHANT_DISPLAY, COL_LOCATION, 
     COL_CURRENCY, COL_CURR_AMOUNT, COL_CONV_DATE, 
     COL_PAY_AMOUNT, COL_PAY_CURR,
     COL_TXN_TYPE, COL_INS_PLN, COL_MOBILE_PAY, 
@@ -91,6 +92,7 @@ COLUMN_TYPES = {
 
     # --- 字串區 (String) ---
     COL_MERCHANT: 'str',
+    COL_MERCHANT_DISPLAY: 'str',
     COL_LOCATION: 'str',
     COL_CONSUMPTION_PLACE: 'str',
     COL_MOBILE_PAY: 'str',
@@ -117,3 +119,23 @@ COLUMN_TYPES = {
     COL_START_DATE: 'date',
     COL_END_DATE: 'date'
 }
+
+
+# ==========================================
+# 6. 統一路徑配置 (Paths)
+# ==========================================
+import os
+
+# 專案根目錄 (假設 const.py 就在根目錄)
+ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
+
+# 核心目錄
+DATA_DIR = os.path.join(ROOT_DIR, 'data')          # 輸入區
+OUTPUT_DIR = os.path.join(ROOT_DIR, 'output')      # 輸出區
+CONFIG_DIR = os.path.join(ROOT_DIR, 'configs')     # 規則設定檔區
+
+# 資料庫路徑
+DB_PATH = os.path.join(OUTPUT_DIR, 'Bills.db')
+
+# 確保輸出目錄存在
+os.makedirs(OUTPUT_DIR, exist_ok=True)

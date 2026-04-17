@@ -9,12 +9,11 @@ from loaders.config_loader import ConfigLoader
 
 logger = logging.getLogger(__name__)
 
-SERVICE_DIR = os.path.dirname(os.path.abspath(__file__))
-BASE_DIR = os.path.dirname(SERVICE_DIR)
+import const
 
-OUTPUT_DIR = os.path.join(BASE_DIR, 'output')
-DB_PATH = os.path.join(OUTPUT_DIR, 'Bills.db')
-CONFIG_DIR = os.path.join(BASE_DIR, 'configs')
+OUTPUT_DIR = const.OUTPUT_DIR
+DB_PATH = const.DB_PATH
+CONFIG_DIR = const.CONFIG_DIR
 
 def run_rewards_calculation():
     """執行回饋計算並產出 Demo 結果"""
@@ -31,9 +30,10 @@ def run_rewards_calculation():
         query = f"""
             SELECT 
                 transaction_date AS {const.COL_TXN_DATE},
-                merchant_name AS {const.COL_MERCHANT},
-                CAST(payment_amount AS REAL) AS {const.COL_AMOUNT},
-                CAST(card_no AS TEXT) AS {const.COL_CARD_NO},
+                merchant_display AS {const.COL_MERCHANT_DISPLAY},
+                mobile_payment AS {const.COL_MOBILE_PAY},
+                CAST(payment_amount AS REAL) AS {const.COL_PAY_AMOUNT},
+                CAST(card_name AS TEXT) AS {const.COL_CARD_TYPE},
                 bank_name AS {const.COL_BANK_NAME},
                 transaction_type AS {const.COL_TXN_TYPE}
             FROM all_transactions
@@ -48,6 +48,7 @@ def run_rewards_calculation():
 
         # 2. 載入規則
         configs = {
+            'reward_rules': ConfigLoader.load_config(CONFIG_DIR, 'bridge_reward_rules', strategy='replace'),
             'rewards_base': ConfigLoader.load_config(CONFIG_DIR, 'dim_card_rewards_base', strategy='replace'),
             'rewards_campaigns': ConfigLoader.load_config(CONFIG_DIR, 'dim_card_rewards_campaigns', strategy='replace')
         }
@@ -61,10 +62,11 @@ def run_rewards_calculation():
             df_result.to_sql('analysis_rewards', conn, if_exists='replace', index=False)
             
         # 5. 產出 Demo 結果 (Before-After 參照用)
-        demo_output = os.path.join(OUTPUT_DIR, 'reward_calculation_demo.csv')
+        demo_output = os.path.join(OUTPUT_DIR, 'reward_calculation_result.csv')
         # 挑選關鍵欄位供對照
-        display_cols = [const.COL_TXN_DATE, const.COL_MERCHANT, const.COL_AMOUNT, 
-                        'is_bypassed', 'base_reward', 'campaign_reward', 'reward_earned', 'applied_rule']
+        display_cols = [const.COL_TXN_DATE, const.COL_MERCHANT_DISPLAY, const.COL_MOBILE_PAY,
+                        const.COL_PAY_AMOUNT, 'is_bypassed', 'base_reward', 'campaign_reward',
+                        'reward_earned', 'applied_rule']
         df_result[display_cols].to_csv(demo_output, index=False, encoding='utf-8-sig')
         
         logger.info(f"✅ 計算完成！Demo 結果已產出至: {demo_output}")

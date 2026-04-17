@@ -12,15 +12,14 @@ from analytics import rfm_modules
 logger = logging.getLogger(__name__)
 
 # ==========================================
-# 核心路徑設定 (相對於專案根目錄)
+# 核心路徑設定 (引用自 const.py)
 # ==========================================
-SERVICE_DIR = os.path.dirname(os.path.abspath(__file__))
-BASE_DIR = os.path.dirname(SERVICE_DIR)
+import const
 
-OUTPUT_DIR = os.path.join(BASE_DIR, 'output')
-DB_PATH = os.path.join(OUTPUT_DIR, 'Bills.db')
+OUTPUT_DIR = const.OUTPUT_DIR
+DB_PATH = const.DB_PATH
 MATRIX_DIR = os.path.join(OUTPUT_DIR, 'matrix')
-CONFIG_DIR = os.path.join(BASE_DIR, 'configs')
+CONFIG_DIR = const.CONFIG_DIR
 
 os.makedirs(MATRIX_DIR, exist_ok=True)
 
@@ -108,7 +107,7 @@ def run_analytics():
     merchants_config_path = os.path.join(CONFIG_DIR, 'dim_merchants.csv')
     if os.path.exists(merchants_config_path):
         df_merchants = pd.read_csv(merchants_config_path, dtype=str)
-        category_map = dict(zip(df_merchants['Replacement'], df_merchants['Category']))
+        category_map = dict(zip(df_merchants['Merchant'], df_merchants['Category']))
         df_raw['category'] = df_raw['merchant_name'].map(category_map).fillna('未分類')
     else:
         logger.warning("⚠️ 找不到 dim_merchants.csv，所有交易將標記為 '未分類'")

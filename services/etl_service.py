@@ -45,15 +45,11 @@ except ImportError:
 logger = logging.getLogger(__name__)
 
 # ==========================================
-# 核心路徑設定 (相對於專案根目錄)
+# 核心路徑設定 (引用自 const.py)
 # ==========================================
-# 因為此檔案在 services/ 資料夾下，BASE_DIR 需往上一層
-SERVICE_DIR = os.path.dirname(os.path.abspath(__file__))
-BASE_DIR = os.path.dirname(SERVICE_DIR)
-
-DATA_DIR = os.path.join(BASE_DIR, 'data')          # 輸入區
-OUTPUT_DIR = os.path.join(BASE_DIR, 'output')      # 輸出區
-CONFIG_DIR = os.path.join(BASE_DIR, 'configs')     # 規則設定檔區
+DATA_DIR = const.DATA_DIR          # 輸入區
+OUTPUT_DIR = const.OUTPUT_DIR      # 輸出區
+CONFIG_DIR = const.CONFIG_DIR      # 規則設定檔區
 
 # 確保輸出目錄存在
 os.makedirs(OUTPUT_DIR, exist_ok=True)

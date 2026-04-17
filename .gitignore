@@ -34,7 +34,12 @@ configs/bridge_reward_rules.csv
 output/result_*.csv
 processors/*_set.py
 analytics/*_set.py
+web/*_private.html
 
+
+# 忽略測試檔
+*_demo.py
+temp_*.py
 
 
 
@@ -54,6 +59,6 @@ spending_matrix_result.csv
 # 忽略 Python 產生的快取 (常見的垃圾)
 __pycache__/
 *.pyc
-# 測試??��??����??
+# 測試??��??����??
 configs/dim_cards.csv
 configs/dim_merchants.csv

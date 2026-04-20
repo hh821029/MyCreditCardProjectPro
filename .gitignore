@@ -22,6 +22,7 @@ excel_files/
 # 忽略資料檔 (保護隱私！)
 *.xlsx
 *.db
+*.json
 Himitsu.py
 configs/dim_billing_history.csv
 configs/dim_cards_private.csv
@@ -59,6 +60,5 @@ spending_matrix_result.csv
 # 忽略 Python 產生的快取 (常見的垃圾)
 __pycache__/
 *.pyc
-# 測試??��??����??
 configs/dim_cards.csv
 configs/dim_merchants.csv

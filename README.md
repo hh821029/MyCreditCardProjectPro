@@ -10,18 +10,30 @@
 ![Privacy](https://img.shields.io/badge/Privacy-Local--First-green)
 
 ## 📖 專案背景 (Project Context)
+1. 從手動紀錄到系統化分析的演進
+本專案的核心起源於對個人消費行為的「高解析度」追求。起初為了梳理消費習慣而申辦信用卡，並密切關注回饋機制。我的第一張卡主打現金回饋，需符合特定條件折抵帳單，因此我開始使用 Excel 手動核對。
 
-在個人財務分析中，跨銀行帳單整合常面臨 **非結構化數據 (Unstructured Data)** 與 **隱私安全** 的雙重挑戰。
-傳統的手動記帳或 Excel 公式維護存在以下痛點：
+大約半年後，我申辦了第二張點數回饋卡。由於其入帳更即時且情境不同，我進一步在 Excel 中加入了點數與現金的效益比較。隨著消費情境細化，我陸續配置了「保費」與「外幣」專屬卡片，並透過追蹤登錄活動來最大化回饋。然而，隨著卡片配置從單一轉向多卡組合，手動維護的邊際成本開始劇增，這段歷程也成為我開發自動化數據管線（Pipeline）的核心契機。
 
-* **Data Consistency:** 支付通路或商家名稱會因為相關商業行為跟法規要求而變更，導致消費明細多樣化難以整理。
-* **Scalability:** 隨著信用卡張數、回饋規則變動等各種因素，觀察商家消費狀態、校對回饋狀態、格式整理的時間成本和資料儲存量呈幾何增長。
-* **Privacy Risks:** 依賴雲端記帳軟體可能導致財務隱私外洩，使用AI開啟電子帳單會有個人資料隱私外洩風險。需要一個可顧及隱私處理的方案。
-   * * **Zero-Cloud Logic：**所有帳單解析與資料庫儲存均在本地端完成，不上傳至任何雲端 API。  
-   * * **Rule Segregation：**將包含個人資訊的規則（如卡號、特定商家定位等）與通用邏輯分離，確保代碼庫可安全地進行版本控制。
+2. 面臨的挑戰與痛點
+在嘗試將上述手動優化邏輯自動化的過程中，我發現跨銀行帳單整合不僅是格式問題，更面臨了數據主導權與隱私安全的多重挑戰：
 
+*   Data Consistency (數據一致性): 支付通路或商家名稱會因商業行為或法規變更而異，導致消費明細格式多樣、極難歸一化。
 
-本專案構建了一個 **Local-First ETL Pipeline**，將原始 CSV 帳單清洗並標準化，存入本地 SQLite 資料庫以支援 **RFM 模型** 與 **回饋最佳化** 分析。
+*   Scalability (擴充性瓶頸): 隨著卡片張數增加與回饋規則變動，觀察商家狀態、校對回饋以及資料儲存的時間成本呈幾何級數增長，Excel 公式已難以負荷複雜的邏輯。
+
+*   Contextual Limitation (情境解析限制): 市面上的雲端記帳軟體使用一般分類邏輯，無法還原個人的「真實消費情境」。若過度依賴外部工具進行分類，將失去對消費行為的深度解析能力，進而阻礙後續的回饋最佳化與消費方向改善。
+
+*   Privacy Risks (隱私安全風險): 將高度敏感的財務與消費數據上傳至第三方伺服器，即使已有強大的雲端 LLM (大型語言模型) API 可用於解析非結構化帳單，仍存在極大的隱私外洩疑慮。
+
+3. 解決方案
+基於上述痛點，本專案構建了一個 Local-First ETL Pipeline，堅持掌握數據主導權：
+
+*   Zero-Cloud Logic: 所有原始 CSV 帳單解析、資料清洗與 SQLite 資料庫儲存均在本地端獨立完成，阻絕外部 API 風險。
+
+*   Rule Segregation: 藉由獨立模組將包含個人資訊的邏輯進行脫敏處理與通用代碼分離，確保專案能安全地展示於公開的 GitHub 儲存庫。
+
+透過此架構，系統不僅能支援後續的 RFM 模型 與 回饋最佳化 分析，更實現了從手動比對到數據驅動決策的轉型。
 
 ---
 
@@ -42,13 +54,16 @@
 graph TB
     subgraph service
         subgraph configs["維度配置 (Dimension Tables)"]
-            E_dim_card_source["卡片維度表<br/>(dim_cards.csv)"]
-            E_dim_merchant_source["商家維度表<br/>(dim_merchants.csv)"]
-            E_dim_reward_rule_source["回饋規則設定表<br/>(YAML/CSV)"]
+            E_dim_parsers["帳單資料配置規則"]
+            E_dim_card_source["卡片維度表<br/>"]
+            E_dim_merchant_source["商家維度表<br/>"]
+            E_dim_thirdpay_source["支付維度表<br/>"]
+            E_dim_reward_rule_source["回饋規則設定表<br/>"]
             end
                 
         subgraph DB_service ["帳單資料庫化(ETL)"]
             E_Bill_source["帳單原始資料<br/>(CSV、PDF、XLS、XLSX等)"] --> ETL_Logic["ETL處理邏輯<br/>(Regex/清洗/整合)"]
+            E_dim_parsers-.-> ETL_Logic
             ETL_Logic --> E_DB["帳單資料庫(SQlite)"]
             end
 
@@ -59,12 +74,13 @@ graph TB
 
         subgraph Reward_Calculation ["回饋計算(實作中)"]
             E_DB -->Reward_Engine["引入一般消費定義<br/>活動回饋條件設定<br/>"]
-            Reward_Engine --> E_Reward["回饋計算結果"]
-            E_RFM --> E_Reward_Analysis["回饋計算分析(待實作)"]
+            Reward_Engine --> E_Reward["回饋計算結果(調整中)"]
+            E_RFM --> E_Reward_Analysis["回饋計算分析(調整中)"]
             E_Reward --> E_Reward_Analysis
             end
             
-        E_dim_merchant_source -.->|"提供名詞對照與正規化"| ETL_Logic  
+        E_dim_merchant_source -.->|"提供名詞對照與正規化"| ETL_Logic
+        E_dim_thirdpay_source -.->|"提供名詞對照與正規化"| ETL_Logic   
         E_dim_card_source -.->|"關聯卡號與銀行"| ETL_Logic
         E_dim_card_source -.->|"提供結帳日/回饋主體"| Reward_Engine   
         E_dim_reward_rule_source -.->|"定義百分比/排除條件"|Reward_Engine
@@ -75,7 +91,7 @@ graph TB
         E_API["Web Console/API"]
         E_API -->|"觸發服務<br/>"| service
 
-        end 
+        end
 
 ```
 
@@ -185,7 +201,7 @@ dim_merchants.csv直接更新在欄位下方就好。
 ## 📅 開發日記 (Dev Log)
 
 * **2026-04-15**
-   * 回饋計算流程採用瀑布式回饋引擎，依序計算特殊活動加碼回饋→一般消費定義排除→一般消費活動加碼回饋→一般消費。細部修正中
+   * 回饋計算流程更新成瀑布式回饋引擎，依序計算特殊活動加碼回饋→一般消費定義排除→一般消費活動加碼回饋→一般消費。細部修正中。
    * Merchant_Display SSOT：將清洗後的資料明細作為後續RFM分析跟回饋計算分析的SSOT。
 
 * **2026-03-27**
@@ -223,7 +239,6 @@ dim_merchants.csv直接更新在欄位下方就好。
 
 * **2026-02-01**
     * 完成 `refine.py` 第一版。
-    * 完成 自動降級機制（找不到真實檔時自動讀取範本）。
 
 * **2026-01-28**
     * 重構了 `refine.py` 的邏輯。遇到一個 Bug：有些卡號末四碼會重複，後來決定加入「卡片名稱」作為第二鍵值來解決。

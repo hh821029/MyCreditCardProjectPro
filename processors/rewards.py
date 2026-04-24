@@ -1,6 +1,5 @@
 import pandas as pd
 import numpy as np
-import re
 import logging
 from datetime import datetime
 from typing import Dict, Optional, List

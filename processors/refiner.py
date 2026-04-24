@@ -1,7 +1,6 @@
 # processors/refiner.py
 import pandas as pd
 import logging
-import re
 import const
 from .mapper import CardMapper
 from .merchant import MerchantNormalizer, PaymentGatewayTagger

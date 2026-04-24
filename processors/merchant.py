@@ -1,6 +1,5 @@
 # processors/merchant.py
 import pandas as pd
-import os
 import logging
 import re
 import const

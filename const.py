@@ -32,6 +32,13 @@ COL_PAY_CURR = 'Payment_Currency'           # 繳款幣別
 COL_BANK_NAME = 'Bank_Name'                 # 銀行代碼
 COL_CARD_NO = 'Card_No'                     # 卡號末四碼
 COL_CARD_TYPE = 'Card_Type'                 # 卡別(卡片名稱，目前無正附卡區分，後續可從規則定義中拆解)
+COL_IS_DUAL_CURRENCY = 'Is_Dual_Currency'   # 是否為雙幣卡
+COL_FX_TYPE = 'FX_Type'                     # 外幣交易類型 (一般消費、現金預借、分期付款)
+COL_ACTIVE_STATUS = 'Active_Status'         # 卡片狀態 (啟用/停用)
+COL_ENABLE_REWARD_CALC = 'Enable_Reward_Calc'  # 是否啟用回饋計算
+COL_VPC_ID = 'VPC_ID'                       # 虛擬卡 ID (用於分辨同一張實體卡的不同虛擬卡)
+COL_VPC_TYPE = 'VPC_Type'                   # 虛擬卡類型 (如: Apple Pay, Google Pay, Samsung Pay)
+
 
 # 其他資訊
 COL_INS_PLN = 'Installment_Plan'            # 分期數(分期專用，預設為1代表不分期)
@@ -43,7 +50,8 @@ COL_INS_PLN = 'Installment_Plan'            # 分期數(分期專用，預設為
 COL_RULE_NAME = 'Rule_Name'                 # 規則名稱 (如: 基礎回饋、網購加碼)
 COL_START_DATE = 'Start_Date'               # 適用起始日
 COL_END_DATE = 'End_Date'                   # 適用結束日
-COL_REWARD_RATE = 'Reward_Rate'             # 回饋比率 (如 0.01)
+COL_REWARD_RATE = 'Reward_Rate'             # 回饋比率 (如一般消費的 0.01、網購的 0.02)
+COL_MERCHANT_RATE = 'Merchant_Rate'         # 特約商家回饋率 (同一個權益項目中，特店A回饋比率 0.02，特店B回饋比率 0.03)
 COL_CAP_AMOUNT = 'Cap_Amount'               # 回饋上限金額
 COL_CALC_METHOD = 'Calc_Method'             # 計算策略 (PER_ITEM / AGGREGATE)
 COL_CONDITION = 'Condition'                 # 條件標籤 (或 Regex 規則)
@@ -54,6 +62,11 @@ COL_TARGET_BANK = 'Target_Bank'             # 目標銀行
 # ==========================================
 # 3. 標準輸出欄位順序 (Schema Definition)
 # ==========================================
+
+# ==========================================
+# 3-1. 寫入資料庫的交易資料標準欄位順序(Transactions Schema)
+# ==========================================
+
 STANDARD_COLUMNS = [
     COL_TXN_DATE, COL_POST_DATE, COL_STAT_MON, 
     COL_MERCHANT, COL_MERCHANT_DISPLAY, COL_LOCATION, 
@@ -62,6 +75,8 @@ STANDARD_COLUMNS = [
     COL_TXN_TYPE, COL_INS_PLN, COL_MOBILE_PAY, 
     COL_CARD_NO, COL_CARD_TYPE, COL_BANK_NAME
 ]
+
+
 
 
 # ==========================================
@@ -84,13 +99,30 @@ BANK_KEYWORD_MAP = {
 
 COLUMN_TYPES = {
     # --- 數值區 (Float) ---
+    # 消費金額相關
     COL_AMOUNT: 'float',
     COL_CURR_AMOUNT: 'float',
     COL_PAY_AMOUNT: 'float',
+    
+    # 回饋計算數字相關
     COL_REWARD_RATE: 'float',
+    COL_MERCHANT_RATE: 'float',
     COL_CAP_AMOUNT: 'float',
 
+    # 布林值區 (Boolean)
+    COL_IS_DUAL_CURRENCY: 'bool',
+    COL_ENABLE_REWARD_CALC: 'bool',
+
     # --- 字串區 (String) ---
+    # 發卡銀行、卡號關聯資訊、虛擬卡資訊
+    COL_CARD_NO: 'str',
+    COL_CARD_TYPE: 'str',
+    COL_FX_TYPE: 'str',
+    COL_BANK_NAME: 'str',
+    COL_VPC_ID: 'str',
+    COL_VPC_TYPE: 'str',
+
+    # 消費關聯資訊
     COL_MERCHANT: 'str',
     COL_MERCHANT_DISPLAY: 'str',
     COL_LOCATION: 'str',
@@ -100,11 +132,10 @@ COLUMN_TYPES = {
     COL_SUB_CATEGORY: 'str',
     COL_CURRENCY: 'str',
     COL_PAY_CURR: 'str',
-    COL_CARD_NO: 'str',
-    COL_CARD_TYPE: 'str',
-    COL_BANK_NAME: 'str',
     COL_TXN_TYPE: 'str',
     COL_INS_PLN: 'str',
+
+    # 消費回饋方案判斷相關
     COL_RULE_NAME: 'str',
     COL_CALC_METHOD: 'str',
     COL_CONDITION: 'str',
@@ -112,10 +143,13 @@ COLUMN_TYPES = {
     COL_TARGET_BANK: 'str',
 
     # --- 日期區 (Date/Timestamp) ---
+    # 消費日期相關
     COL_TXN_DATE: 'date',
     COL_POST_DATE: 'date',
     COL_CONV_DATE: 'date',
     COL_STAT_MON: 'date',
+    
+    # 回饋方案適用期間
     COL_START_DATE: 'date',
     COL_END_DATE: 'date'
 }

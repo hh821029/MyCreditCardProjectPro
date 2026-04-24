@@ -25,6 +25,8 @@ excel_files/
 *.json
 Himitsu.py
 configs/dim_billing_history.csv
+configs/dim_cards.csv
+configs/dim_merchants.csv
 configs/dim_cards_private.csv
 configs/dim_merchants_set.csv
 configs/dim_merchants_private.csv
@@ -60,5 +62,3 @@ spending_matrix_result.csv
 # 忽略 Python 產生的快取 (常見的垃圾)
 __pycache__/
 *.pyc
-configs/dim_cards.csv
-configs/dim_merchants.csv

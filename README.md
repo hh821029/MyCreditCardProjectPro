@@ -99,7 +99,8 @@ graph TB
 
    1. Extract (提取)：main.py 掃描 data/ 資料夾，利用 get_parser 自動識別銀行，透過 parsers/ 將 PDF/CSV 轉為一致的 STANDARD_COLUMNS 格式。
    2. Transform (清洗)：
-       * classifier.py 根據 configs/ 中的規則自動判斷交易類型。
+       * Parser-Side Normalization：補齊帳單的資料缺陷像是幣別、統整日期至年月日、卡號資料萃取
+       * classifier.py 根據 configs/ 中的規則自動判斷交易類型(一般消費、繳款、紅利折抵)。
        * 移除支付前綴（如 LINEPAY*），還原乾淨的商家名稱以利後續分析。
    3. Load (寫入)：
        * sqlite_loader.py 將乾淨的交易紀錄寫入 output/Bills.db。
@@ -136,6 +137,11 @@ My-Credit-Card-ETL/
 │   
 ├── api/
 │   └── server.py               # [本機端伺服器] 
+│ 
+├── services/                   # [服務層] 負責呼叫服務對應的解析層、處理層
+│   ├── etl_service.py          # 服務：帳單資料清洗並產生SQLite資料庫
+│   ├── analysis_service.py     # 服務：從SQLite資料庫提取RFM分析要用的基本資料，並產生多視角報表
+│   └── reward_service.py       # 服務：從SQLite資料庫提取回饋計算要用的資料
 │  
 ├── parsers/                    # [解析層] 負責各銀行原始帳單轉為標準 DataFrame
 │   ├── base.py                 # Parser 基類，定義統一介面
@@ -149,7 +155,8 @@ My-Credit-Card-ETL/
 │   ├── refiner.py              # 清洗總指揮，協調各子處理器
 │   ├── classifier.py           # 自動標記交易類別 (一般、國外、退刷、繳款)
 │   ├── merchant.py             # 商家名稱清洗與正規化
-│   └── mapper.py               # 欄位對應處理
+│   ├── mapper.py               # 欄位對應處理
+│   └── reward.py               # 回饋計算處理
 │
 ├── loaders/                    # [載入層] 負責資料儲存、載入設定檔資料
 │   ├──schema_enforcer.py       # 匯入型別規則已確認資料型態是否指定，阻止針對資料型態的預測
@@ -159,6 +166,7 @@ My-Credit-Card-ETL/
 ├── analytics/                  # [分析層] 負責進階數據建模
 │   ├── run_rfm.py              # RFM 分析執行腳本
 │   ├── rfm_modules.py          # RFM 計算引擎 (Merchant/Payment/Card)
+│   ├── rfm_utils.py            # RFM 計算核心
 │   └── run_rewards.py          # 回饋金計算執行腳本
 │
 ├── configs/                        # [設定檔資料夾] 
@@ -210,8 +218,13 @@ dim_merchants.csv直接更新在欄位下方就好。
 
 ## 📅 開發日記 (Dev Log)
 
-* **2026-04-25**
-   * 更新全域變數宣告型態，預處理資料架構調整。
+* **2026-04-29**
+   * 資料正規化下放 (Parser-Level Normalization)：
+        - 將幣別補全邏輯（如自動補TWD）從 Service 層下放到各銀行Parser，確保原始資料提取階段即完成標準化，防止後續處理覆蓋。
+        - 補齊 TWD 幣別缺失並清洗金額雜訊。
+   * 更新全域變數宣告型態：
+        - 改善 const.py 與 base.py 的型態強制轉換邏輯，提升 Pipeline 穩定性。 
+   * 回饋計算流程更新，持續補強瀑布式計算引擎對日期、行動支付、消費地的判斷。
 
 * **2026-04-15**
    * 回饋計算流程更新成瀑布式回饋引擎，依序計算特殊活動加碼回饋→一般消費定義排除→一般消費活動加碼回饋→一般消費。細部修正中。

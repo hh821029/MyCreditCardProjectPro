@@ -32,13 +32,12 @@ class CTBCParser(BaseCsvParser):
         df = df[available].rename(columns=self.mapping)
         df[const.COL_BANK_NAME] = self.bank_id
         
-        # 確保卡號欄位是乾淨的字串 (處理可能已產生的 .0)
-        if const.COL_CARD_NO in df.columns:
-            df[const.COL_CARD_NO] = df[const.COL_CARD_NO].astype(str).str.replace(r'\.0$', '', regex=True).str.strip()
-
         df[const.COL_PAY_AMOUNT] = self._clean_amount(df, const.COL_PAY_AMOUNT)
         
         df = self.transform_common_dates(df, filepath)
+        
+        # 最終正規化 (補齊 TWD 等)
+        df = self._finalize_normalization(df)
         
         # 最後強制執行一次型態檢查
         df = self._enforce_dtypes(df)

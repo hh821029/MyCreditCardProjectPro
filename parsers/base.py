@@ -116,9 +116,40 @@ class BaseBillParser:
                 df[col_name] = df[col_name].replace({'nan': None, 'None': None, '': None})
             elif dtype == 'date':
                 if not pd.api.types.is_datetime64_any_dtype(df[col_name]):
-                     df[col_name] = pd.to_datetime(df[col_name], errors='coerce')
+                     df[col_name] = pd.to_datetime(df[col_name], format='mixed', errors='coerce')
         return df
     
+    def _finalize_normalization(self, df: pd.DataFrame) -> pd.DataFrame:
+        """
+        最終正規化邏輯：
+        1. 補齊基本欄位 (確保 Standard Columns 存在)
+        2. 處理 Payment_Currency：若有金額但無幣別，預設補 TWD
+        3. 處理 Currency_Type：若有金額但無幣別，預設補 TWD
+        """
+        # 1. 處理 Payment_Currency
+        if const.COL_PAY_AMOUNT in df.columns:
+            if const.COL_PAY_CURR not in df.columns:
+                df[const.COL_PAY_CURR] = 'TWD'
+            else:
+                # 補缺失值
+                df[const.COL_PAY_CURR] = df[const.COL_PAY_CURR].fillna('TWD')
+                # 處理空字串
+                mask_empty = (df[const.COL_PAY_CURR].astype(str).str.strip() == '')
+                df.loc[mask_empty, const.COL_PAY_CURR] = 'TWD'
+
+        # 2. 處理 Currency_Type (原始幣別)
+        if const.COL_CURR_AMOUNT in df.columns:
+            if const.COL_CURRENCY not in df.columns:
+                 df[const.COL_CURRENCY] = 'TWD'
+            else:
+                # 補缺失值
+                df[const.COL_CURRENCY] = df[const.COL_CURRENCY].fillna('TWD')
+                # 處理空字串
+                mask_empty = (df[const.COL_CURRENCY].astype(str).str.strip() == '')
+                df.loc[mask_empty, const.COL_CURRENCY] = 'TWD'
+
+        return df
+
     def extract_card_info_generic(self, df: pd.DataFrame, config: dict) -> pd.DataFrame:
         """
         [通用卡號提取邏輯]

@@ -23,12 +23,16 @@ excel_files/
 *.xlsx
 *.db
 *.json
+data_*/
 Himitsu.py
 configs/dim_billing_history.csv
 configs/dim_cards.csv
 configs/dim_merchants.csv
 configs/dim_cards_private.csv
-configs/dim_merchants_set.csv
+configs/dim_merchants_private.csv
+configs/NCCC_listed_merchant.yaml
+configs/general_reward_exclusion.yaml
+
 configs/dim_merchants_private.csv
 configs/dim_card_rewards_base.csv
 configs/dim_card_rewards_campaigns.csv

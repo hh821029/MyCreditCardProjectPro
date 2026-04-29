@@ -46,27 +46,17 @@
 
 ## 7. 回饋計算引擎實作規範 (Rewards Engine Implementation)
 為解決 Excel 公式管理規則引用與「Before-After」對照困難的痛點，實作應遵循以下邏輯：
-1.  **資料源讀取**：一律從資料庫 `all_transactions` 讀取，確保原始交易資料的一測性。
-2.  **瀑布式回饋引擎 (Priority)**：
-    *   **1.特殊回饋加碼:** - 如：繳稅活動回饋、繳費活動回饋、國泰Cube卡集精選權益、中信Uniopen聯名卡聯名回饋。
-    *   **2.排除在一般消費定義的明細:** - 
-        *   銀行費用：手續費、稅款、預借現金、紅利折抵。
-        *   便利商店、全聯通路
-        *   小額支付平台如飲料店、餐飲通路等。
-        *   其他銀行公告之特定交易如特定公司保費。
-    *   **3.一般消費活動加碼:** - 一般消費中符合指定條件的交易加碼。
-    *   **4.一般消費:**- 一般消費。
-3.  **計算條件整理 (Calculation Condition)**：
-    *   **日期遮罩 (Time Masking)**：根據活動的 `Start_Date` 與 `End_Date` 篩選交易子集合進行計算。
-    *   **計算策略 (Calculation Strategy)**：
-        *    **逐筆計算 (Per-Item)**：每筆交易金額 * 比率後取整數/捨去。
-        *    **加總計算 (Aggregate)**：活動子集合總金額 * 比率。
-        *    **上限判定 (Cap Management)**：利用 `cumsum()` 追蹤當期已獲得回饋，並與活動規則中的 `Cap_Amount` 進行比對攔截。
-4.  **結果對照**：輸出應包含 `applied_rule` 欄位，標示該筆交易套用的最終規則名稱，以便與 Excel 手動試算進行對照。
-5.  **資料提取與對齊規範 (Data Fetching & Alignment)**：
-    *   **SQL 提取原則**：從資料庫讀取交易資料時，應直接在 SQL 查詢中使用 `AS` 將資料庫欄位映射至 `const.py` 定義的大寫常數（如 `merchant_name AS Merchant`）。
-    *   **強制轉型**：在 SQL 層級使用 `CAST(payment_amount AS REAL)` 確保金額為數值，並在 Pandas 讀取時利用 `parse_dates` 處理日期，以減少後續處理的型別衝突。
-    *   **職責分離**：SQL僅負責資料過濾與欄位對齊；所有的回饋策略邏輯（如：逐筆/加總計算、上限控管、Regex 排除）應統一在 processors/rewards.py 中利用 Pandas/NumPy 來處理。
+1.  **資料源讀取**：一律從資料庫 `all_transactions` 讀取，並在 SQL 階段利用 `WHERE` 排除 `繳款`、`紅利折抵`、`各項費用`。
+2.  **瀑布式回饋引擎 (Waterfall Engine)**：
+    *   **Priority 排序**：由 `Priority` 欄位決定執行順序（數字越小越優先）。
+    *   **計算截斷 (Early Break)**：若規則 `Reward_Cal_Break` 為 `TRUE`，匹配後即停止該筆交易的後續計算。
+    *   **條件比對順序**：在單條規則內，比對順序為：**日期/卡別 -> 支付方式 (mobile_payment) -> 商家名稱 (merchant_display)**。
+3.  **計算條件與日期處理**：
+    *   **日期交集 (Date Intersection)**：規則最終適用區間 = `max(分配表起始, 定義表起始)` 至 `min(分配表結束, 定義表結束)`。
+    *   **外部名單關鍵字**：支援在 `merchant_display` 欄位填入 `NCCC_listed_merchant` 或 `general_reward_exclusion` 以自動引入對應 YAML 商家清單。
+4.  **欄位對齊 (Schema)**：
+    *   `bridge_reward_rules.csv` 欄位：`Reward_Program`, `mobile_payment`, `merchant_display`, `Start_Date`, `End_Date`, `Merchant_Rate`, `Priority`, `Reward_Cal_Break`。
+    *   交易資料比對優先採用 `Card_Type` 作為卡片識別。
 
 ## 8. README.md規範 (README.md)
 1.  **修改權限**：整個README.md的修改要事先詢問，並且僅提供文字跟修改建議。

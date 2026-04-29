@@ -1,4 +1,9 @@
 # const.py
+import pandas as pd
+import os
+
+pd.set_option('future.no_silent_downcasting', True)
+
 
 # ==========================================
 # 1. 交易資料欄位 (Transactions)
@@ -158,7 +163,7 @@ COLUMN_TYPES = {
 # ==========================================
 # 6. 統一路徑配置 (Paths)
 # ==========================================
-import os
+
 
 # 專案根目錄 (假設 const.py 就在根目錄)
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))

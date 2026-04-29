@@ -36,7 +36,7 @@ class CubeParser(BaseCsvParser):
         df[const.COL_BANK_NAME] = self.bank_id
 
         # 3. 清洗國泰專屬的「偽空值」符號
-        #    把獨立存在的 "-", "−", "－" 轉為真正的 NaN
+        #    把獨立存在的 "-", "−", "－" 轉為真正的 NaN(修正成對應的空值型態)
         df = self._clean_cathay_null_symbols(df)
         
         # 4. 國泰專屬拆解 (國家/幣別)
@@ -55,23 +55,33 @@ class CubeParser(BaseCsvParser):
 
         # 6.呼叫父類別，並傳入 filepath (為了抓年份)
         df = self.transform_common_dates(df, filepath)
+        
+        # 7. 最終正規化 (補齊 TWD 等)
+        df = self._finalize_normalization(df)
 
         return df
     
     def _clean_cathay_null_symbols(self, df: pd.DataFrame) -> pd.DataFrame:
         """
-        將國泰 CSV 中用來表示空值的橫槓符號轉為真正的 NaN。
-        使用 Regex 完全匹配，避免誤傷正常包含連字號的字串 (如 "EC-MOMO")。
+        將國泰 CSV 中用來表示空值的橫槓符號轉為對應型別的空值。
         """
-        # Regex 解說:
-        # ^\s* : 開頭允許任意空白
-        # [-−－—]  : 匹配半形橫槓、數學減號、全形橫槓、破折號
-        # \s*$     : 結尾允許任意空白
         pattern = r'^\s*[-−－—]\s*$'
         
-        # 針對全表進行替換，把符合的字串變成 numpy 的 NaN
-        return df.replace(pattern, np.nan, regex=True)
-
+        for col in df.columns:
+            target_type = const.COLUMN_TYPES.get(col)
+            # 建立遮罩：找出符合橫槓符號的儲存格
+            mask = df[col].astype(str).str.contains(pattern, regex=True, na=False)
+            
+            if mask.any():
+                if target_type == 'date':
+                    df.loc[mask, col] = pd.NaT
+                elif target_type == 'float':
+                    df.loc[mask, col] = np.nan
+                else:
+                    # 包含 str 或未定義型別，統一用 None (在 Pandas Object 中代表 NULL)
+                    df.loc[mask, col] = None
+                    
+        return df
 
     def _process_point_redemption(self, df: pd.DataFrame) -> pd.DataFrame:
         """

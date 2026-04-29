@@ -7,7 +7,7 @@ def ALL_TRANSACTION_COL_MAPPING():
             const.COL_CONV_DATE: 'conversion_date',     # 外幣交易的換算日期
             const.COL_STAT_MON: 'statement_month',      # 帳單月份
             const.COL_BANK_NAME: 'bank_name',           # 發卡銀行
-            const.COL_CARD_TYPE: 'card_name',           # 卡別
+            const.COL_CARD_TYPE: 'card_type',           # 卡別
             const.COL_CARD_NO: 'card_no',               # 卡號末四碼
             const.COL_MERCHANT: 'merchant_name',        # 商家名稱
             const.COL_MERCHANT_DISPLAY: 'merchant_display', # 清洗後商家名稱
@@ -33,3 +33,13 @@ def CARD_INFO_COL_MAPPING():
         const.COL_VPC_ID: 'vpc_id',                     # 虛擬卡ID(如果有的話)
         const.COL_VPC_TYPE: 'vpc_type',                 # 虛擬卡類型(Apple Pay, Google Pay, Samsung Pay, etc.)
     }
+
+def mapping_3to2():
+    return {
+        
+        'TWN': 'TW', 'USA': 'US', 'JPN': 'JP', 'KOR': 'KR',
+        'HKG': 'HK', 'SGP': 'SG', 'GBR': 'GB', 'CHN': 'CN',
+        'IRL': 'IE', 'DEU': 'DE', 'FRA': 'FR', 'AUS': 'AU',
+        'VNM': 'VN', 'THA': 'TH', 'MYS': 'MY', 'IDN': 'ID'
+    }
+    

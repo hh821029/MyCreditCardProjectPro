@@ -87,7 +87,7 @@ def run_analytics():
         sql = """
         SELECT transaction_id, transaction_date, merchant_name, 
                mobile_payment, payment_amount, 
-               transaction_type, bank_name, card_name
+               transaction_type, bank_name, card_type
         FROM all_transactions
         """
         df_raw = pd.read_sql(sql, conn)

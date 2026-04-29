@@ -49,5 +49,7 @@ class HNCBParser(BaseHtmlParser):
         # 4. 日期補全 (自動抓檔名年份)
         df = self.transform_common_dates(df, filepath)
         
+        # 5. 最終正規化 (補齊 TWD 等)
+        df = self._finalize_normalization(df)
 
         return df

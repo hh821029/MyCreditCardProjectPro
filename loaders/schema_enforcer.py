@@ -57,7 +57,8 @@ class SchemaEnforcer:
             elif target_type == 'date':
                 # 確保轉換為 datetime64[ns]
                 if not pd.api.types.is_datetime64_any_dtype(df_enforced[col_name]):
-                    df_enforced[col_name] = pd.to_datetime(df_enforced[col_name], errors='coerce')
+                    # 使用 format='mixed' 消除推論警告，並兼顧不同日期格式
+                    df_enforced[col_name] = pd.to_datetime(df_enforced[col_name], format='mixed', errors='coerce')
 
         return df_enforced
 

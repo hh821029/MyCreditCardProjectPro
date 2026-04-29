@@ -105,7 +105,8 @@ class SQLiteLoader:
         for col in date_cols:
             if col in df_final.columns:
                 # 轉為 'YYYY-MM-DD' 格式，若為空值則轉為 NaT
-                df_final[col] = pd.to_datetime(df_final[col], errors='coerce').dt.strftime('%Y-%m-%d')
+                # 使用 format='mixed' 消除推論警告
+                df_final[col] = pd.to_datetime(df_final[col], format='mixed', errors='coerce').dt.strftime('%Y-%m-%d')
 
         # 4. 處理空值 (避免 SQL 寫入 NaN 變成 'NaN' 字串)
         # 數值型態填入 None (SQL 的 NULL)，字串型態看需求，這裡統一將字串的 NaN 轉為 None

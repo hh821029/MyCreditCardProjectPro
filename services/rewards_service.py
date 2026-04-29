@@ -31,12 +31,14 @@ def run_rewards_calculation():
             SELECT 
                 transaction_date AS {const.COL_TXN_DATE},
                 merchant_display AS {const.COL_MERCHANT_DISPLAY},
+                merchant_location AS {const.COL_LOCATION},
                 mobile_payment AS {const.COL_MOBILE_PAY},
                 CAST(payment_amount AS REAL) AS {const.COL_PAY_AMOUNT},
-                CAST(card_name AS TEXT) AS {const.COL_CARD_TYPE},
+                CAST(card_type AS TEXT) AS {const.COL_CARD_TYPE},
                 bank_name AS {const.COL_BANK_NAME},
                 transaction_type AS {const.COL_TXN_TYPE}
             FROM all_transactions
+            WHERE transaction_type NOT IN ('繳款', '紅利折抵', '各項費用')
         """
         
         with sqlite3.connect(DB_PATH) as conn:

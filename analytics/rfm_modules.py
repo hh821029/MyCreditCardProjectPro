@@ -103,9 +103,9 @@ def calculate_payment_rfm(df_raw, windows_config):
 
 def calculate_card_rfm(df_raw, windows_config):
     df_clean = _get_clean_df(df_raw)
-    df_clean = df_clean[df_clean['card_name'].notna() & (df_clean['card_name'] != '')]
+    df_clean = df_clean[df_clean['card_type'].notna() & (df_clean['card_type'] != '')]
     
-    final_df = _calculate_multi_window_rfm(df_clean, ['bank_name', 'card_name'], windows_config)
+    final_df = _calculate_multi_window_rfm(df_clean, ['bank_name', 'card_type'], windows_config)
     
     if 'category' in final_df.columns:
         final_df = final_df.drop(columns=['category'])

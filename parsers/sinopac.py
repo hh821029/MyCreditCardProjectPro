@@ -84,6 +84,10 @@ class SinopacBillParser(BasePdfParser):
 
             # 呼叫 BaseBillParser 的通用處理 (日期轉換與型態強制)
             df = self.transform_common_dates(df, pdf_path)
+            
+            # 最終正規化 (補齊 TWD 等)
+            df = self._finalize_normalization(df)
+            
             df = self._enforce_dtypes(df)
             
             return df

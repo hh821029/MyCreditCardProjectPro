@@ -53,6 +53,21 @@ class TransactionClassifier:
         target_mask = mask_empty & mask_keyword
         if target_mask.any():
             df.loc[target_mask, const.COL_TXN_TYPE] = '繳款'
+
+            # --- 資料整理: 繳款 ---
+            # 1. 淨空卡片資訊
+            df.loc[target_mask, [const.COL_CARD_TYPE, const.COL_CARD_NO]] = None
+            
+            # 2. 消費地標準化
+            df.loc[target_mask, const.COL_LOCATION] = 'TW'
+            
+            # 3. 幣別與金額整理
+            # currency_type 複製到 payment_currency
+            df.loc[target_mask, const.COL_PAY_CURR] = df.loc[target_mask, const.COL_CURRENCY]
+            
+            # payment_amount 若無值則從 currency_amount 複製
+            pay_amt_missing = target_mask & (df[const.COL_PAY_AMOUNT].isna() | (df[const.COL_PAY_AMOUNT] == ''))
+            df.loc[pay_amt_missing, const.COL_PAY_AMOUNT] = df.loc[pay_amt_missing, const.COL_CURR_AMOUNT]
                 
         return df
 
@@ -69,6 +84,23 @@ class TransactionClassifier:
         if target_mask.any():
             df.loc[target_mask, const.COL_TXN_TYPE] = '紅利折抵'
             
+            # --- 資料整理: 紅利折抵 ---
+            # 1. 消費地標準化
+            df.loc[target_mask, const.COL_LOCATION] = 'TW'
+            
+            # 2. 幣別整理: 優先互補，最後才補 TWD
+            # 2-1. 若 Payment_Currency 為空，嘗試從 Currency_Type 複製
+            pay_curr_empty = target_mask & (df[const.COL_PAY_CURR].isna() | (df[const.COL_PAY_CURR] == ''))
+            df.loc[pay_curr_empty, const.COL_PAY_CURR] = df.loc[pay_curr_empty, const.COL_CURRENCY]
+            
+            # 2-2. 仍為空則補 TWD
+            pay_curr_still_missing = target_mask & (df[const.COL_PAY_CURR].isna() | (df[const.COL_PAY_CURR] == ''))
+            df.loc[pay_curr_still_missing, const.COL_PAY_CURR] = 'TWD'
+            
+            # 3. 金額整理: Payment_Amount 若無值則從 Currency_Amount 複製
+            pay_amt_empty = target_mask & (df[const.COL_PAY_AMOUNT].isna() | (df[const.COL_PAY_AMOUNT] == ''))
+            df.loc[pay_amt_empty, const.COL_PAY_AMOUNT] = df.loc[pay_amt_empty, const.COL_CURR_AMOUNT]            
+            
         return df
 
     def _mark_fees(self, df: pd.DataFrame) -> pd.DataFrame:
@@ -83,6 +115,26 @@ class TransactionClassifier:
         target_mask = mask_empty & mask_keyword
         if target_mask.any():
             df.loc[target_mask, const.COL_TXN_TYPE] = '各項費用'
+            
+            # --- 資料整理: 各項費用 ---
+            # 1. 消費地標準化
+            df.loc[target_mask, const.COL_LOCATION] = 'TW'
+            
+            # 2. 幣別整理: 優先互補，最後才補 TWD
+            pay_curr_empty = target_mask & (df[const.COL_PAY_CURR].isna() | (df[const.COL_PAY_CURR] == ''))
+            df.loc[pay_curr_empty, const.COL_PAY_CURR] = df.loc[pay_curr_empty, const.COL_CURRENCY]
+            
+            pay_curr_still_missing = target_mask & (df[const.COL_PAY_CURR].isna() | (df[const.COL_PAY_CURR] == ''))
+            df.loc[pay_curr_still_missing, const.COL_PAY_CURR] = 'TWD'
+            
+            df.loc[target_mask, const.COL_CURRENCY] = df.loc[target_mask, const.COL_PAY_CURR]
+            
+            # 3. 金額整理: 優先互補
+            pay_amt_empty = target_mask & (df[const.COL_PAY_AMOUNT].isna() | (df[const.COL_PAY_AMOUNT] == ''))
+            df.loc[pay_amt_empty, const.COL_PAY_AMOUNT] = df.loc[pay_amt_empty, const.COL_CURR_AMOUNT]
+            
+            curr_amt_empty = target_mask & (df[const.COL_CURR_AMOUNT].isna() | (df[const.COL_CURR_AMOUNT] == ''))
+            df.loc[curr_amt_empty, const.COL_CURR_AMOUNT] = df.loc[curr_amt_empty, const.COL_PAY_AMOUNT]
             
         return df
 

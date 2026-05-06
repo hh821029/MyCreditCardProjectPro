@@ -66,9 +66,13 @@ def run_rewards_calculation():
         # 5. 產出 Demo 結果 (Before-After 參照用)
         demo_output = os.path.join(OUTPUT_DIR, 'reward_calculation_result.csv')
         # 挑選關鍵欄位供對照
-        display_cols = [const.COL_TXN_DATE, const.COL_MERCHANT_DISPLAY, const.COL_MOBILE_PAY,
-                        const.COL_PAY_AMOUNT, 'is_bypassed', 'base_reward', 'campaign_reward',
-                        'reward_earned', 'applied_rule']
+        display_cols = [const.COL_TXN_DATE, 
+                        const.COL_CARD_TYPE,
+                        const.COL_MERCHANT_DISPLAY,
+                        const.COL_MOBILE_PAY,
+                        const.COL_PAY_AMOUNT,
+                        'is_bypassed', 
+                        'applied_rule']
         df_result[display_cols].to_csv(demo_output, index=False, encoding='utf-8-sig')
         
         logger.info(f"✅ 計算完成！Demo 結果已產出至: {demo_output}")

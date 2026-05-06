@@ -28,9 +28,9 @@ class MerchantNormalizer:
         merchants = df[const.COL_MERCHANT].astype(str).str.strip()
         
         for _, rule in self.rules.iterrows():
-            pattern = rule['Pattern']
-            replacement = rule['Merchant']  # 更名為 Merchant
-            category = rule['Category']
+            pattern = rule.get('pattern') or rule.get('Pattern')
+            replacement = rule.get('merchant_display') or rule.get('merchant_name') or rule.get('Merchant')
+            category = rule.get('category') or rule.get('Category')
             
             if pd.isna(pattern) or pattern == '': continue
 
@@ -74,11 +74,12 @@ class PaymentGatewayTagger:
         merchants = df[const.COL_MERCHANT].astype(str).str.strip()
         
         for _, rule in self.rules.iterrows():
-            pattern = rule['Pattern']
-            prefix = rule.get('Prefix_Label')
-            category = rule.get('Category') 
+            # 優先嘗試資料庫映射後的名稱，若無則使用原始 CSV 名稱
+            pattern = rule.get('gateway_display') or rule.get('Pattern')
+            prefix = rule.get('gateway_prefix') or rule.get('Prefix_Label')
+            category = rule.get('gateway_name') or rule.get('GateWay')
             
-            if pd.isna(pattern): continue
+            if pd.isna(pattern) or pattern == '': continue
             
             try:
                 mask = merchants.str.contains(pattern, case=False, regex=True, na=False)

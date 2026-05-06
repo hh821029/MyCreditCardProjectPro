@@ -26,9 +26,11 @@ except ImportError:
 # 4. 引入資料庫載入器
 try:
     from loaders.sqlite_loader import SQLiteLoader
+    from loaders.bills_to_db import BillsToDB
 except ImportError:
-    logging.warning("⚠️ 尚未建立 loaders.sqlite_loader，將跳過資料庫載入步驟")
+    logging.warning("⚠️ 尚未建立 loaders.sqlite_loader 或 loaders.bills_to_db，將跳過資料庫載入步驟")
     SQLiteLoader = None
+    BillsToDB = None
 
 # 5. [新加入] 引入配置載入器
 try:
@@ -191,9 +193,23 @@ def run_etl_pipeline():
         final_df.to_csv(csv_output_path, index=False, encoding='utf-8-sig')
         logger.info(f"✅ 清洗完成，已輸出至 {csv_output_path}")
 
-        logger.info("📦 準備載入資料庫...")
-        loader = SQLiteLoader(output_dir=OUTPUT_DIR)
-        loader.load(final_df, mode='replace')
+        if SQLiteLoader and BillsToDB:
+            logger.info("📦 準備載入資料庫...")
+            # 1. 預處理資料 (ID 生成, 去重, 欄位映射)
+            processor = BillsToDB(OUTPUT_DIR)
+            db_df = processor.prepare_data(final_df)
+
+            # 2. 寫入資料庫 (使用通用 SQLiteLoader)
+            loader = SQLiteLoader(db_path=const.DB_PATH)
+            loader.load(
+                db_df, 
+                table_name='all_transactions', 
+                mode='replace',
+                indices=['transaction_date', 'merchant_name', 'card_no', 'transaction_id']
+            )
+        else:
+            logger.warning("⚠️ 載入器缺失，略過資料庫寫入。")
+
         
     except Exception as e:
         logger.error(f"🚨 ETL 流程發生未預期嚴重錯誤: {e}")

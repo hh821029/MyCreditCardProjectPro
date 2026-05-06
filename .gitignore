@@ -48,7 +48,10 @@ web/*_private.html
 *_demo.py
 temp_*.py
 
-
+# C# 專案測試檔
+home_page.cs
+home_page.csproj
+MyCreditCardProjectPro.sln
 
 # 忽略分析結果檔、分析過程產生的中間檔
 refined_all_banks.csv

@@ -139,6 +139,7 @@ My-Credit-Card-ETL/
 │   └── server.py               # [本機端伺服器] 
 │ 
 ├── services/                   # [服務層] 負責呼叫服務對應的解析層、處理層
+│   ├── config_service.py       # 服務：帳單關聯設定產生DB資料庫        
 │   ├── etl_service.py          # 服務：帳單資料清洗並產生SQLite資料庫
 │   ├── analysis_service.py     # 服務：從SQLite資料庫提取RFM分析要用的基本資料，並產生多視角報表
 │   └── reward_service.py       # 服務：從SQLite資料庫提取回饋計算要用的資料
@@ -156,11 +157,13 @@ My-Credit-Card-ETL/
 │   ├── classifier.py           # 自動標記交易類別 (一般、國外、退刷、繳款)
 │   ├── merchant.py             # 商家名稱清洗與正規化
 │   ├── mapper.py               # 欄位對應處理
-│   └── reward.py               # 回饋計算處理
+│   └── rewards.py               # 回饋計算處理
 │
 ├── loaders/                    # [載入層] 負責資料儲存、載入設定檔資料
+│   ├──bills_to_db.py           # 將清洗好的帳單資料存入Bills.db
+│   ├──sync_configs_to_db.py    # 將整理好的設定資料存入Configs.db
 │   ├──schema_enforcer.py       # 匯入型別規則已確認資料型態是否指定，阻止針對資料型態的預測
-│   ├──sqlite_loader.py         # 將清洗後的資料匯入 SQLite (Bills.db) 
+│   ├──sqlite_loader.py         # 將資料匯入 SQLite (Bills.db、Configs.db) 
 │   └──config_loader.py         # 將相關的設定資料匯入主程式執行
 │
 ├── analytics/                  # [分析層] 負責進階數據建模
@@ -169,7 +172,8 @@ My-Credit-Card-ETL/
 │   ├── rfm_utils.py            # RFM 計算核心
 │   └── run_rewards.py          # 回饋金計算執行腳本
 │
-├── configs/                        # [設定檔資料夾] 
+├── configs/                            # [設定檔資料夾] 
+│   ├── db_columns_mapping.py           # [設定檔] 資料庫欄位映射定義
 │   ├── dim_cards.csv                   # [設定檔] 真實卡號放置地點(已提供可直接讀取的範例檔)
 │   ├── transaction_types.yaml          # [設定檔] 銀行交易類別，排除持卡人跟銀行的交易像繳款、折抵/回饋、費用(手續費/服務費)(公開)
 │   ├── dim_merchants.csv               # [設定檔] 真實交易地點，使用Regex(正則表達式)-Replacement來清洗消費明細(部分公開)
@@ -181,7 +185,7 @@ My-Credit-Card-ETL/
 │
 ├── data/                       # [帳單csv放置處] 真實的 CSV 帳單放這邊。
 │   └── (各銀行帳單)
-└── output/                     # [輸出區] 存放 Bills.db 與 分析報表 (已在 .gitignore)
+└── output/                     # [輸出區] 存放 Bills.db、Configs.db 與 分析報表 (已在 .gitignore)
 
 ```
 附註：
@@ -217,6 +221,10 @@ dim_merchants.csv直接更新在欄位下方就好。
 - [ ] **台北富邦**：徵求 CSV 格式樣本 (Help Wanted)
 
 ## 📅 開發日記 (Dev Log)
+
+* **2026-05-06**
+   * 前端服務更新：設定檔可透過網頁入口載入
+   * 完成設定檔資料庫製作服務。
 
 * **2026-04-29**
    * 資料正規化下放 (Parser-Level Normalization)：

@@ -97,7 +97,14 @@ class RewardsCalculator:
             bridge['End_Date'] = bridge[['End_Date', 'End_Date_camp']].min(axis=1)
 
         # 剔除無效規則 (交集為空)
-        bridge = bridge[bridge['Start_Date'] <= bridge['End_Date']].copy()
+        # 注意：需處理 NaT，否則 NaT <= NaT 會回傳 False 導致規則被誤刪
+        valid_mask = bridge['Start_Date'].fillna(pd.Timestamp('1900-01-01')) <= \
+                     bridge['End_Date'].fillna(pd.Timestamp('2099-12-31'))
+        bridge = bridge[valid_mask].copy()
+
+        # 填補最終日期 NaT，確保 process() 中的日期比對正常運作
+        bridge['Start_Date'] = bridge['Start_Date'].fillna(pd.Timestamp('1900-01-01'))
+        bridge['End_Date'] = bridge['End_Date'].fillna(pd.Timestamp('2099-12-31'))
 
         # 整合其餘欄位 (Coalesce 邏輯: 優先取 camp，再取 base)
         if 'Bank_Name_camp' in bridge.columns:

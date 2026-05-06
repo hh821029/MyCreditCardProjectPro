@@ -89,11 +89,24 @@
     <div class="container">
         <h1>MyCreditCardProjectPro 控制台</h1>
         
-        <div class="button-group">
+        <div class="button-group-loader">
             <button id="btnEtl" onclick="runTask('etl')">🚀 執行 ETL 流程</button>
+            <button id="btnConfig_All" onclick="runTask('config_all')">⚙️ 所有設定資料同步</button>
+            <button id="btnClear" class="btn-secondary" onclick="clearConsole()">🧹 清空日誌</button>
+        </div>
+
+
+        <div class="button-group-config">
+            <button id="btnConfig_Card" onclick="runTask('config_card')">⚙️ 信用卡資料載入</button>
+            <button id="btnConfig_Reward" onclick="runTask('config_reward')">⚙️ 回饋資料載入</button>
+            <button id="btnConfig_Mer" onclick="runTask('config_mer')">⚙️ 商家資料載入</button>
+            <button id="btnConfig_PayGate" onclick="runTask('config_paygate')">⚙️ 支付錢包資料載入</button>
+        </div>
+
+        
+        <div class="button-group-analysis">
             <button id="btnAnalysis" onclick="runTask('analytics')">📊 執行 RFM 分析</button>
             <button id="btnRewards" onclick="runTask('rewards')">💰 計算回饋</button>
-            <button id="btnClear" class="btn-secondary" onclick="clearConsole()">🧹 清空日誌</button>
         </div>
 
         <div id="status">目前狀態：閒置</div>
@@ -133,15 +146,11 @@
                 eventSource.close();
             }
 
-            const btnEtl = document.getElementById('btnEtl');
-            const btnAnalysis = document.getElementById('btnAnalysis');
-            const btnRewards = document.getElementById('btnRewards');
+            const allButtons = document.querySelectorAll('button');
             const statusDiv = document.getElementById('status');
 
-            // 鎖定按鈕
-            btnEtl.disabled = true;
-            btnAnalysis.disabled = true;
-            if(btnRewards) btnRewards.disabled = true;
+            // 鎖定所有按鈕，防止重複觸發
+            allButtons.forEach(btn => btn.disabled = true);
 
             statusDiv.textContent = `目前狀態：正在執行 ${type.toUpperCase()}...`;
             statusDiv.style.color = '#e67e22';
@@ -160,10 +169,8 @@
                 eventSource.close();
                 eventSource = null;
                 
-                // 解鎖按鈕
-                btnEtl.disabled = false;
-                btnAnalysis.disabled = false;
-                if(btnRewards) btnRewards.disabled = false;
+                // 解鎖所有按鈕
+                allButtons.forEach(btn => btn.disabled = false);
 
                 statusDiv.textContent = `目前狀態：${type.toUpperCase()} 任務結束`;
                 statusDiv.style.color = '#27ae60';

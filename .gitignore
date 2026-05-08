@@ -52,6 +52,7 @@ temp_*.py
 home_page.cs
 home_page.csproj
 MyCreditCardProjectPro.sln
+obj/
 
 # 忽略分析結果檔、分析過程產生的中間檔
 refined_all_banks.csv

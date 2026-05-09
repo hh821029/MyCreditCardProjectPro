@@ -11,7 +11,7 @@ try:
     from parsers.sinopac import SinopacBillParser
     from parsers.esun import EsunParser
     from parsers.cathay import CubeParser
-    from parsers.CTBC import CTBCParser
+    from parsers.ctbc import CTBCParser
     from parsers.hncb import HNCBParser
 except ImportError as e:
     logging.error(f"⚠️ 模組載入不完全: {e}")
@@ -156,7 +156,7 @@ def run_etl_pipeline():
                     configs = {
                         'merchants': ConfigLoader.load_config(CONFIG_DIR, 'dim_merchants', strategy='append'),
                         'cards': ConfigLoader.load_config(CONFIG_DIR, 'dim_cards', strategy='replace'),
-                        'gateways': ConfigLoader.load_config(CONFIG_DIR, 'dim_payment_gateway', strategy='append'),
+                        'gateways': ConfigLoader.load_config(CONFIG_DIR, 'dim_payment_process', strategy='append'),
                         'txn_types': ConfigLoader.load_yaml(CONFIG_DIR, 'transaction_types.yaml')
                     }
                     refiner = DataRefiner(config_dir=CONFIG_DIR, configs=configs)

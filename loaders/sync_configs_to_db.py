@@ -6,8 +6,9 @@ from loaders.sqlite_loader import SQLiteLoader
 from configs.db_columns_mapping import (
     CARD_INFO_COL_MAPPING,
     REWARD_PROGRAM_COL_MAPPING,
+    REWARD_CAMPAIGN_COL_MAPPING,
     MERCHANT_COL_MAPPING,
-    PAYMENT_GATEWAY_COL_MAPPING,
+    PAYMENT_PROCESS_COL_MAPPING,
     REWARD_RULE_COL_MAPPING
 )
 
@@ -69,38 +70,37 @@ class ConfigSyncManager:
             strategy='append'  # 特約商店資料以合併方式處理
         )
 
-    def sync_gateways(self):
+    def sync_payment_processes(self):
         self._sync_item(
-            "支付平台", 
-            "dim_payment_gateway", 
-            "dim_payment_gateways", 
-            PAYMENT_GATEWAY_COL_MAPPING, 
-            indices=['gateway_name', 'gateway_display'],
-            strategy='append'  # 支付平台資料以合併方式處理
+            "支付/處理流程", 
+            "dim_payment_process", 
+            "dim_payment_processes", 
+            PAYMENT_PROCESS_COL_MAPPING, 
+            indices=['payment_process', 'payment_process_pattern'],
+            strategy='append'  # 支付/處理流程資料以合併方式處理
         )
 
-    def sync_reward_programs(self):
-        """同步回饋計畫 (合併基礎與活動)"""
-        try:
-            logger.info("🔄 正在同步 回饋計畫 (Base + Campaigns)...")
-            df_base = ConfigLoader.load_config(self.config_dir, "dim_card_rewards_base")
-            df_camp = ConfigLoader.load_config(self.config_dir, "dim_card_rewards_campaigns")
-            
-            df_combined = pd.concat([df_base, df_camp], ignore_index=True).drop_duplicates()
-            
-            if df_combined.empty:
-                logger.warning("⚠️ 回饋計畫資料為空，跳過。")
-                return
+    def sync_reward_base(self):
+        """同步基礎回饋計畫"""
+        self._sync_item(
+            "基礎回饋計畫", 
+            "dim_card_rewards_base", 
+            "dim_reward_base", 
+            REWARD_PROGRAM_COL_MAPPING, 
+            indices=['reward_program', 'card_type', 'bank_name'],
+            strategy='replace'
+        )
 
-            mapping = REWARD_PROGRAM_COL_MAPPING()
-            df_mapped = df_combined.rename(columns=mapping)
-            cols_to_keep = [v for v in mapping.values() if v in df_mapped.columns]
-            df_final = df_mapped[cols_to_keep]
-
-            self.loader.load(df_final, "dim_reward_programs", mode='replace', indices=['reward_program', 'card_type', 'bank_name'])
-            logger.info("✅ 回饋計畫同步完成 -> [dim_reward_programs]")
-        except Exception as e:
-            logger.error(f"❌ 回饋計畫同步失敗: {e}", exc_info=True)
+    def sync_reward_campaigns(self):
+        """同步活動加碼回饋"""
+        self._sync_item(
+            "活動加碼回饋", 
+            "dim_card_rewards_campaigns", 
+            "dim_reward_campaigns", 
+            REWARD_CAMPAIGN_COL_MAPPING, 
+            indices=['campaign_name', 'card_type', 'bank_name'],
+            strategy='replace'
+        )
 
     def sync_reward_rules(self):
         self._sync_item(
@@ -116,8 +116,9 @@ class ConfigSyncManager:
         logger.info("🚀 開始執行全量配置同步...")
         self.sync_cards()
         self.sync_merchants()
-        self.sync_gateways()
-        self.sync_reward_programs()
+        self.sync_payment_processes()
+        self.sync_reward_base()
+        self.sync_reward_campaigns()
         self.sync_reward_rules()
         logger.info("🏁 全量配置同步完成！")
 

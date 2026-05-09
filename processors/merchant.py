@@ -28,9 +28,10 @@ class MerchantNormalizer:
         merchants = df[const.COL_MERCHANT].astype(str).str.strip()
         
         for _, rule in self.rules.iterrows():
-            pattern = rule.get('pattern') or rule.get('Pattern')
-            replacement = rule.get('merchant_display') or rule.get('merchant_name') or rule.get('Merchant')
-            category = rule.get('category') or rule.get('Category')
+            # 優先使用 snake_case 與當前 CSV 標題
+            pattern = rule.get('pattern')
+            replacement = rule.get('merchant') or rule.get('merchant_display')
+            category = rule.get('category')
             
             if pd.isna(pattern) or pattern == '': continue
 
@@ -50,13 +51,13 @@ class MerchantNormalizer:
         return df
 
 
-class PaymentGatewayTagger:
+class PaymentProcessTagger:
     """
-    負責標記支付管道 (如 LinePay, 街口)
+    負責標記支付管道或處理方式 (如 LinePay, 街口, 自動扣款)
     """
     def __init__(self, config_dir: str, rules: pd.DataFrame = None):
         """
-        :param rules: 由外部注入的規則 DataFrame (包含 Pattern, Prefix_Label, Category)
+        :param rules: 由外部注入的規則 DataFrame (包含 payment_process_pattern, process_prefix, payment_process)
         """
         self.rules = rules if rules is not None else pd.DataFrame()
 
@@ -74,10 +75,10 @@ class PaymentGatewayTagger:
         merchants = df[const.COL_MERCHANT].astype(str).str.strip()
         
         for _, rule in self.rules.iterrows():
-            # 優先嘗試資料庫映射後的名稱，若無則使用原始 CSV 名稱
-            pattern = rule.get('gateway_display') or rule.get('Pattern')
-            prefix = rule.get('gateway_prefix') or rule.get('Prefix_Label')
-            category = rule.get('gateway_name') or rule.get('GateWay')
+            # 使用新的統一命名規範
+            pattern = rule.get(const.COL_PROCESS_PATTERN) or rule.get('payment_process_pattern')
+            prefix = rule.get(const.COL_PROCESS_PREFIX) or rule.get('process_prefix')
+            process_name = rule.get(const.COL_PAYMENT_PROCESS) or rule.get('payment_process')
             
             if pd.isna(pattern) or pattern == '': continue
             
@@ -86,8 +87,8 @@ class PaymentGatewayTagger:
                 target_mask = mask & (df[const.COL_MOBILE_PAY] == '')
                 
                 if target_mask.any():
-                    if pd.notna(category):
-                        df.loc[target_mask, const.COL_MOBILE_PAY] = category
+                    if pd.notna(process_name):
+                        df.loc[target_mask, const.COL_MOBILE_PAY] = process_name
                     
                     if pd.notna(prefix):
                         df.loc[target_mask, '_Temp_Prefix'] = prefix

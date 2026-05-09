@@ -11,60 +11,61 @@ pd.set_option('future.no_silent_downcasting', True)
 # 這些是我們希望在最終 CSV 看到的標準欄位名稱
 
 # 交易日期資訊
-COL_TXN_DATE = 'Transaction_Date'           # 交易日
-COL_POST_DATE = 'Posting_Date'              # 入帳日
-COL_CONV_DATE = 'Conversion_Date'          # 外幣折算日
-COL_STAT_MON = 'Statement_Month'            # 帳單月份 (通常格式 YYYY-MM-01)
+COL_TXN_DATE = 'transaction_date'           # 交易日
+COL_POST_DATE = 'posting_date'              # 入帳日
+COL_CONV_DATE = 'conversion_date'          # 外幣折算日
+COL_STAT_MON = 'statement_month'            # 帳單月份 (通常格式 YYYY-MM-01)
 
 # 商店消費資訊
-COL_MERCHANT = 'Merchant'                   # (清洗前)交易說明/特店名稱
-COL_MERCHANT_DISPLAY = 'Merchant_Display'   # (清洗後)交易說明/特店名稱
-COL_LOCATION = 'Merchant_Location'          # 消費地 (國別)
-COL_CONSUMPTION_PLACE = 'Consumption_Place' # (玉山專用) 原始消費地
-COL_MOBILE_PAY = 'Mobile_Payment'           # 行動支付註記
-COL_TXN_TYPE = 'Transaction_Type'           # 交易類別 (一般) 繳款、轉帳...
-COL_CATEGORY = "Category"                   # 消費類別 (食衣住行...)
-COL_SUB_CATEGORY = "Sub_Category"           # 消費次類別 (點心、速食...)
-COL_GATEWAY_DISPLAY = 'Gateway_Display'     # 支付平台在帳單上的顯示名稱關鍵字 (如 LINE Pay, 街口)
+COL_MERCHANT = 'merchant'                   # (清洗前)交易說明/特店名稱
+COL_MERCHANT_DISPLAY = 'merchant_display'   # (清洗後)交易說明/特店名稱
+COL_LOCATION = 'merchant_location'          # 消費地 (國別)
+COL_CONSUMPTION_PLACE = 'consumption_place' # (玉山專用) 原始消費地
+COL_MOBILE_PAY = 'mobile_payment'           # 行動支付註記
+COL_TXN_TYPE = 'transaction_type'           # 交易類別 (一般) 繳款、轉帳...
+COL_CATEGORY = "category"                   # 消費類別 (食衣住行...)
+COL_SUB_CATEGORY = "sub_category"           # 消費次類別 (點心、速食...)
+COL_PROCESS_PATTERN = 'payment_process_pattern' # 支付平台/處理方式在帳單上的顯示名稱關鍵字 (如 LINE Pay, 街口)
 
 # 消費金額資訊
-COL_CURRENCY = 'Currency_Type'              # 原始幣別
-COL_AMOUNT = 'Amount'                       # 交易金額 (通用)
-COL_CURR_AMOUNT = 'Currency_Amount'         # 外幣金額
-COL_PAY_AMOUNT = 'Payment_Amount'           # 台幣應繳金額
-COL_PAY_CURR = 'Payment_Currency'           # 繳款幣別
+COL_CURRENCY = 'currency_type'              # 原始幣別
+COL_AMOUNT = 'amount'                       # 交易金額 (通用)
+COL_CURR_AMOUNT = 'currency_amount'         # 外幣金額
+COL_PAY_AMOUNT = 'payment_amount'           # 台幣應繳金額
+COL_PAY_CURR = 'payment_currency'           # 繳款幣別
 
 # 卡片資訊
-COL_BANK_NAME = 'Bank_Name'                 # 銀行代碼
-COL_CARD_NO = 'Card_No'                     # 卡號末四碼
-COL_CARD_TYPE = 'Card_Type'                 # 卡別(卡片名稱，目前無正附卡區分，後續可從規則定義中拆解)
-COL_IS_DUAL_CURRENCY = 'Is_Dual_Currency'   # 是否為雙幣卡
-COL_FX_TYPE = 'FX_Type'                     # 外幣交易類型 (一般消費、現金預借、分期付款)
-COL_ACTIVE_STATUS = 'Active_Status'         # 卡片狀態 (啟用/停用)
-COL_ENABLE_REWARD_CALC = 'Enable_Reward_Calc'  # 是否啟用回饋計算
-COL_VPC_ID = 'VPC_ID'                       # 虛擬卡 ID (用於分辨同一張實體卡的不同虛擬卡)
-COL_VPC_TYPE = 'VPC_Type'                   # 虛擬卡類型 (如: Apple Pay, Google Pay, Samsung Pay)
+COL_BANK_NAME = 'bank_name'                 # 銀行代碼
+COL_CARD_NO = 'card_no'                     # 卡號末四碼
+COL_CARD_TYPE = 'card_type'                 # 卡別(卡片名稱，目前無正附卡區分，後續可從規則定義中拆解)
+COL_IS_DUAL_CURRENCY = 'is_dual_currency'   # 是否為雙幣卡
+COL_FX_TYPE = 'fx_type'                     # 外幣交易類型 (一般消費、現金預借、分期付款)
+COL_ACTIVE_STATUS = 'active_status'         # 卡片狀態 (啟用/停用)
+COL_ENABLE_REWARD_CALC = 'enable_reward_calc'  # 是否啟用回饋計算
+COL_VPC_ID = 'vpc_id'                       # 虛擬卡 ID (用於分辨同一張實體卡的不同虛擬卡)
+COL_VPC_TYPE = 'vpc_type'                   # 虛擬卡類型 (如: Apple Pay, Google Pay, Samsung Pay)
 
 
 # 其他資訊
-COL_INS_PLN = 'Installment_Plan'            # 分期數(分期專用，預設為1代表不分期)
-COL_PAYMENT_GATEWAY = 'Payment_Gateway'     # 支付平台名稱 (如 LINE Pay, 街口)
+COL_INS_PLN = 'installment_plan'            # 分期數(分期專用，預設為1代表不分期)
+COL_PAYMENT_PROCESS = 'payment_process'     # 支付平台/處理方式名稱 (如 LINE Pay, 街口)
+COL_PROCESS_PREFIX = 'process_prefix'       # 支付平台/處理方式前綴詞
 
 
 # ==========================================
 # 2. 回饋規則欄位 (Rewards Configs) - [新增]
 # ==========================================
-COL_REWARD_PROGRAM = 'Reward_Program'       # 紅利/回饋計畫名稱
-COL_START_DATE = 'Start_Date'               # 適用起始日
-COL_END_DATE = 'End_Date'                   # 適用結束日
-COL_REWARD_TYPE = 'Reward_Type'             # 回饋類型 (現金回饋、紅利點數、里程數等)
-COL_REWARD_RATE = 'Reward_Rate'             # 回饋比率 (如一般消費的 0.01、網購的 0.02)
-COL_REWARD_CYCLE = 'Reward_Cycle'           # 回饋計算週期 (如依帳單結帳週期、依消費日曆月、依消費日等)
-COL_MERCHANT_RATE = 'Merchant_Rate'         # 特約商家回饋率 (同一個權益項目中，特店A回饋比率 0.02，特店B回饋比率 0.03)
-COL_CAP_AMOUNT = 'Cap_Amount'               # 回饋上限
-COL_CALC_METHOD = 'Calc_Method'             # 計算策略 (PER_ITEM / AGGREGATE)
-COL_ROUND_STRATEGY = 'Round_Strategy'       # 四捨五入策略 (如無條件捨去、無條件進位、四捨五入到整數、四捨五入到小數點後兩位等)
-COL_CONDITION = 'Condition'                 # 條件標籤 (或 Regex 規則)
+COL_REWARD_PROGRAM = 'reward_program'       # 紅利/回饋計畫名稱
+COL_START_DATE = 'start_date'               # 適用起始日
+COL_END_DATE = 'end_date'                   # 適用結束日
+COL_REWARD_TYPE = 'reward_type'             # 回饋類型 (現金回饋、紅利點數、里程數等)
+COL_REWARD_RATE = 'reward_rate'             # 回饋比率 (如一般消費的 0.01、網購的 0.02)
+COL_REWARD_CYCLE = 'reward_cycle'           # 回饋計算週期 (如依帳單結帳週期、依消費日曆月、依消費日等)
+COL_MERCHANT_RATE = 'merchant_rate'         # 特約商家回饋率 (同一個權益項目中，特店A回饋比率 0.02，特店B回饋比率 0.03)
+COL_CAP_AMOUNT = 'cap_amount'               # 回饋上限
+COL_CALC_METHOD = 'calc_method'             # 計算策略 (PER_ITEM / AGGREGATE)
+COL_ROUND_STRATEGY = 'round_strategy'       # 四捨五入策略 (如無條件捨去、無條件進位、四捨五入到整數、四捨五入到小數點後兩位等)
+COL_CONDITION = 'condition'                 # 條件標籤 (或 Regex 規則)
 
 
 
@@ -137,7 +138,9 @@ COLUMN_TYPES = {
     COL_LOCATION: 'str',
     COL_CONSUMPTION_PLACE: 'str',
     COL_MOBILE_PAY: 'str',
-    COL_GATEWAY_DISPLAY: 'str',
+    COL_PROCESS_PATTERN: 'str',
+    COL_PAYMENT_PROCESS: 'str',
+    COL_PROCESS_PREFIX: 'str',
     COL_CATEGORY: 'str',
     COL_SUB_CATEGORY: 'str',
     COL_CURRENCY: 'str',

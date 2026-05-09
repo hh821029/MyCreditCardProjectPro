@@ -1,4 +1,4 @@
-Conversion_Date,Bank_Name,Currency_Type,Exchange_Rate,備註,,,,,,,
+conversion_date,bank_name,currency_type,exchange_rate,remarks,,,,,,,
 2025/3/24,esun_bank,JPY,0.2201,Conversion_Date：外幣結算日,,,,,,,
 2025/4/25,esun_bank,JPY,0.2298,Bank_Name：外幣結算銀行,,,,,,,
 2025/6/3,esun_bank,JPY,0.2061,Currency_Type：外幣結算幣別,,,,,,,

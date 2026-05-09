@@ -1,6 +1,6 @@
-Pattern,GateWay,Prefix_Label,Priority,說明,欄位定義解說
+payment_process_pattern,payment_process,process_prefix,priority,說明,欄位定義解說
 (?i)(?:連加|連支|Ｌｉｎｅ.*ｐａｙ|LINE.*PAY|ＬＰＥＰＩ|LPEPI),Line Pay,LinePay－,25,連加支付&連加電子支付,Pattern：關鍵字或正則表達式
-(?i)(?:街口|JKOPAY),街口支付,街口支付－,25,街口支付,GateWay：第三方支付電子支付種類
+(?i)(?:街口|JKOPAY),街口支付,街口支付－,25,街口支付,Category：第三方支付電子支付種類
 (?i)(?:icash.*Pay|ｉｃａｓｈ.*ｐａｙ|ICP|ＩＣＰ),icash Pay,ICP－,25,愛金卡支付，有票證的電子支付,Order：處理順序
 (?i)(?:ＯＰ錢包|ＯＰＥＮ錢包),OPEN錢包,ＯＰ錢包－,30,統一超商的第三方支付,payment_prefix：清洗完商家資料後要加的前綴詞
 (?i)(?:FamiPay|ＦＡＭＩＰＡＹ),Famipay,Famipay-,30,全家便利商店的第三方支付,備註：解釋說明這個正則表達的處理情境

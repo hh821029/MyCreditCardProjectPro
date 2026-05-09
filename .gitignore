@@ -25,15 +25,14 @@ excel_files/
 *.json
 data_*/
 Himitsu.py
+configs/*_private.csv
 configs/dim_billing_history.csv
 configs/dim_cards.csv
 configs/dim_merchants.csv
 configs/dim_cards_private.csv
 configs/dim_merchants_private.csv
-configs/NCCC_listed_merchant.yaml
+configs/nccc_listed_merchant.yaml
 configs/general_reward_exclusion.yaml
-
-configs/dim_merchants_private.csv
 configs/dim_card_rewards_base.csv
 configs/dim_card_rewards_campaigns.csv
 configs/bridge_cube_selections.csv
@@ -47,6 +46,7 @@ web/*_private.html
 # 忽略測試檔
 *_demo.py
 temp_*.py
+configs/test_*.csv
 
 # C# 專案測試檔
 home_page.cs

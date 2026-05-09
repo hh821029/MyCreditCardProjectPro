@@ -177,7 +177,7 @@ My-Credit-Card-ETL/
 │   ├── dim_cards.csv                   # [設定檔] 真實卡號放置地點(已提供可直接讀取的範例檔)
 │   ├── transaction_types.yaml          # [設定檔] 銀行交易類別，排除持卡人跟銀行的交易像繳款、折抵/回饋、費用(手續費/服務費)(公開)
 │   ├── dim_merchants.csv               # [設定檔] 真實交易地點，使用Regex(正則表達式)-Replacement來清洗消費明細(部分公開)
-│   ├── dim_payment_gateway.csv         # [設定檔] 電子支付平台，使用Regex(正則表達式)-Replacement來整理支付通路(公開)
+│   ├── dim_payment_process.csv         # [設定檔] 支付/處理流程，使用Regex(正則表達式)-Replacement來整理支付通路(公開)
 │   ├── dim_card_rewards_base.csv       # [設定檔] 基本回饋設定(已在 .gitignore )
 │   ├── dim_card_rewards_campaigns.csv  # [設定檔] 消費活動回饋設定(已在 .gitignore)
 │   ├── bridge_reward_rules.csv         # [設定檔] 基本回饋設定橋接表(已在 .gitignore)
@@ -220,66 +220,5 @@ dim_merchants.csv直接更新在欄位下方就好。
 - [ ] **台新銀行**：徵求 CSV 格式樣本 (Help Wanted)
 - [ ] **台北富邦**：徵求 CSV 格式樣本 (Help Wanted)
 
-## 📅 開發日記 (Dev Log)
 
-* **2026-05-06**
-   * 前端服務更新：設定檔可透過網頁入口載入
-   * 完成設定檔資料庫製作服務。
-
-* **2026-04-29**
-   * 資料正規化下放 (Parser-Level Normalization)：
-        - 將幣別補全邏輯（如自動補TWD）從 Service 層下放到各銀行Parser，確保原始資料提取階段即完成標準化，防止後續處理覆蓋。
-        - 補齊 TWD 幣別缺失並清洗金額雜訊。
-   * 更新全域變數宣告型態：
-        - 改善 const.py 與 base.py 的型態強制轉換邏輯，提升 Pipeline 穩定性。 
-   * 回饋計算流程更新，持續補強瀑布式計算引擎對日期、行動支付、消費地的判斷。
-
-* **2026-04-15**
-   * 回饋計算流程更新成瀑布式回饋引擎，依序計算特殊活動加碼回饋→一般消費定義排除→一般消費活動加碼回饋→一般消費。細部修正中。
-   * Merchant_Display SSOT：將清洗後的資料明細作為後續RFM分析跟回饋計算分析的SSOT。
-
-* **2026-03-27**
-   * 回饋計算流程建立，內容設定調整中
-   * 資料型態定義法律化：定義輸入輸出的資料型態，解決資料型態衝突報錯的問題。
-   * 帳單月份標籤實作：透過帳單資訊產生帳單月標籤定位回饋原始資料，降低維護成本。
-
-* **2026-03-21**
-   * 專案架構調整，新增前端頁面以便傳送請求
-   * 僅使用本機端，不連網以符合個人使用情境
-
-* **2026-03-12**
-   * 行為準則建立：完成 GEMINI.md，定義編碼規範、架構完整性保護，以及最核心的「核心變更驗證規範 (Refactoring Protocol)」。
-   * 配置載入器實作：建立 loaders/config_loader.py，支援多重編碼嘗試 (UTF-8 → Big5 → cp950) 與 Append/Replace 讀取策略。
-   * 核心架構解耦：
-       * 重構 main.py：將設定檔讀取邏輯從處理器移至進入點。
-       * 重構 processors/ (merchant.py, classifier.py, refiner.py)：改為注入式規則架構，不再內部讀檔。
-   * 穩定性驗證：透過 A/B 測試比對 result_old.csv 與 result_new.csv，確認重構前後處理結果 100% 完全一致。
-
-* **2026-03-07**
-    * 專案架構調整，並同步整理檔案命名 (parser資料夾，和資料夾內的所有檔名) 。
-    * 分散parser，從一條線處理轉成依據各銀行帳單格式進行模組呼叫。
-    * 開始撰寫回饋計算邏輯
-
-* **2026-02-07**
-    * 撤下 Mock Data Generator (generate_mock.py) 與隱私分流架構 (Himitsu.py)。
-    * 重構專案檔案命名 (merchants.csv, payment_gateway.csv) 以符合工程慣例。
-    * RFM記錄邏輯上傳。
-    * 支付規則(Regex)上傳，整理商家規則(Regex)中。
-    * 更新Git歷史紀錄
-
-* **2026-02-02**
-    * 建立 Mock Data Generator (generate_mock.py) 與隱私分流架構 (Himitsu.py)。
-    * 開始分離EXCEL回饋紀錄邏輯跟跟RFM紀錄邏輯
-
-* **2026-02-01**
-    * 完成 `refine.py` 第一版。
-
-* **2026-01-28**
-    * 重構了 `refine.py` 的邏輯。遇到一個 Bug：有些卡號末四碼會重複，後來決定加入「卡片名稱」作為第二鍵值來解決。
-    * 新增了國泰 Cube 卡的雙號自動歸戶功能。
-    * 消費明細關鍵字表(Regex)定稿
-
-* **2026-01-20**
-    * 專案初始化。完成第一版 ETL 架構 (`etl.py`)。
-    * 變更資料流處理模式，從原本寫在Excel的回饋相關資料跟RFM關資料開始形成專案。
 

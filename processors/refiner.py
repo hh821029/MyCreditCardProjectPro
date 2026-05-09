@@ -3,7 +3,7 @@ import pandas as pd
 import logging
 import const
 from .mapper import CardMapper
-from .merchant import MerchantNormalizer, PaymentGatewayTagger
+from .merchant import MerchantNormalizer, PaymentProcessTagger
 from .classifier import TransactionClassifier
 
 logger = logging.getLogger(__name__)
@@ -13,7 +13,7 @@ class DataRefiner:
         configs = configs or {}
         self.mapper = CardMapper(config_dir, rules=configs.get('cards'))
         self.merchant_normalizer = MerchantNormalizer(config_dir, rules=configs.get('merchants'))
-        self.payment_tagger = PaymentGatewayTagger(config_dir, rules=configs.get('gateways'))
+        self.payment_tagger = PaymentProcessTagger(config_dir, rules=configs.get('gateways'))
         self.classifier = TransactionClassifier(config_dir, config=configs.get('txn_types'))
 
     def process(self, df: pd.DataFrame) -> pd.DataFrame:

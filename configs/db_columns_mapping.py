@@ -1,6 +1,10 @@
 import const
 
 def ALL_TRANSACTION_COL_MAPPING():
+    """
+    主要用於 Parser 正規化後的標準欄位對應。
+    這些 key 通常來自 const.py 中的定義。
+    """
     return {
             const.COL_TXN_DATE: 'transaction_date',     # 消費日/消費授權日
             const.COL_POST_DATE: 'posting_date',        # 入帳日
@@ -24,71 +28,90 @@ def ALL_TRANSACTION_COL_MAPPING():
     }
 
 def CARD_INFO_COL_MAPPING():
+    """對應 dim_cards.csv"""
     return {
-        'Bank_Name': 'bank_name',
-        'Card_Type': 'card_type',
-        'Is_Dual_Currency': 'is_dual_currency',
-        'FX_type': 'fx_type',                           # 修正 CSV 中的小寫 t
-        'Card_No': 'card_no',
-        'Is_Active': 'is_active',
-        'Enable_Reward_Calc': 'enable_reward_calc',
-        'VPC_ID': 'vpc_id',
-        'VPC_Type': 'vpc_type'
+        'bank_name': 'bank_name',
+        'card_type': 'card_type',
+        'is_dual_currency': 'is_dual_currency',
+        'fx_type': 'fx_type',
+        'card_no': 'card_no',
+        'is_active': 'is_active',
+        'enable_reward_calc': 'enable_reward_calc',
+        'vpc_id': 'vpc_id',
+        'vpc_type': 'vpc_type'
     }
 
 def REWARD_PROGRAM_COL_MAPPING():
+    """對應 dim_card_rewards_base.csv"""
     return {
-        'Bank_Name': 'bank_name',
-        'Card_Type': 'card_type',
-        'Reward_Program': 'reward_program',
-        'Base_Rate': 'reward_rate',                     # CSV 裡是 Base_Rate
-        'Merchant_Rate': 'merchant_rate',
-        'Reward_Cycle': 'reward_cycle',
-        'Cap_Amount': 'cap_amount',
-        'Reward_Unit': 'reward_type',                   # CSV 裡是 Reward_Unit
-        'Start_Date': 'start_date',
-        'End_Date': 'end_date',
-        'Calc_Method': 'calc_method',
-        'Round_Strategy': 'round_strategy'
+        'bank_name': 'bank_name',
+        'card_type': 'card_type',
+        'reward_program': 'reward_program',
+        'base_rate': 'reward_rate',
+        'merchant_rate': 'merchant_rate',
+        'reward_cycle': 'reward_cycle',
+        'cap_amount': 'cap_amount',
+        'reward_unit': 'reward_type',
+        'start_date': 'start_date',
+        'end_date': 'end_date',
+        'calc_method': 'calc_method',
+        'round_strategy': 'round_strategy'
+    }
+
+def REWARD_CAMPAIGN_COL_MAPPING():
+    """對應 dim_card_rewards_campaigns.csv"""
+    return {
+        'bank_name': 'bank_name',
+        'card_type': 'card_type',
+        'campaign_name': 'campaign_name',
+        'reward_rate': 'reward_rate',
+        'reward_cycle': 'reward_cycle',
+        'cap_amount': 'cap_amount',
+        'reward_unit': 'reward_type',
+        'start_date': 'start_date',
+        'end_date': 'end_date',
+        'calc_method': 'calc_method',
+        'round_strategy': 'round_strategy'
     }
 
 def MERCHANT_COL_MAPPING():
+    """對應 dim_merchants.csv"""
     return {
-        'Pattern': 'pattern',                           # 必備：正則匹配規則
-        'Merchant': 'merchant_display',                 # 清洗後商家名稱 (Replacement)
-        'Priority': 'priority',                         # 優先順序
-        'Category': 'category',                         # 商業分類
-        'Sub_Category': 'sub_category',                 # 商業次分類
-        'RFM_Exclusion': 'rfm_exclusion',               # RFM 排除註記
-        'IS_NCCC_Listed': 'is_nccc_listed'              # NCCC 名單註記
+        'pattern': 'pattern',
+        'merchant': 'merchant_display',
+        'priority': 'priority',
+        'category': 'category',
+        'sub_category': 'sub_category',
+        'rfm_exclusion': 'rfm_exclusion',
+        'is_nccc_listed': 'is_nccc_listed'
     }
 
-def PAYMENT_GATEWAY_COL_MAPPING():
+def PAYMENT_PROCESS_COL_MAPPING():
+    """對應 dim_payment_process.csv"""
     return {
-        'Pattern': 'gateway_display',                   # 支付平台在帳單上的顯示名稱關鍵字 (Regex)
-        'GateWay': 'gateway_name',                      # 支付平台名稱 (如 LINE Pay, 街口)
-        'Prefix_Label': 'gateway_prefix',               # 清洗後要增加的前綴詞
-        'Priority': 'priority'                          # 處理優先順序
+        'payment_process_pattern': 'payment_process_pattern',
+        'payment_process': 'payment_process',
+        'process_prefix': 'process_prefix',
+        'priority': 'priority'
     }
 
 def REWARD_RULE_COL_MAPPING():
+    """對應 bridge_reward_rules.csv"""
     return {
-        'Reward_Program': 'reward_program',
+        'reward_program': 'reward_program',
         'mobile_payment': 'mobile_payment',
         'merchant_display': 'merchant_display',
-        'Start_Date': 'start_date',
-        'End_Date': 'end_date',
-        'Merchant_Rate': 'merchant_rate',
-        'Priority': 'priority',
-        'Reward_Cal_Break': 'reward_cal_break'
+        'start_date': 'start_date',
+        'end_date': 'end_date',
+        'merchant_rate': 'merchant_rate',
+        'priority': 'priority',
+        'reward_cal_break': 'reward_cal_break'
     }
 
 def mapping_3to2():
     return {
-        
         'TWN': 'TW', 'USA': 'US', 'JPN': 'JP', 'KOR': 'KR',
         'HKG': 'HK', 'SGP': 'SG', 'GBR': 'GB', 'CHN': 'CN',
         'IRL': 'IE', 'DEU': 'DE', 'FRA': 'FR', 'AUS': 'AU',
         'VNM': 'VN', 'THA': 'TH', 'MYS': 'MY', 'IDN': 'ID'
     }
-    

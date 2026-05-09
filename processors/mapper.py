@@ -89,13 +89,11 @@ class CardMapper:
         # 3. 規則比對 (精準唯一模式)
         # ==========================================
         for _, rule in self.rules.iterrows():
-            target_card = rule.get('Card_No', '')
+            # 使用 snake_case key
+            target_card = rule.get('card_no', '')
             original_card = rule.get('代換前卡號', '')
             
             # --- 決定比對標的 (Match Key) ---
-            # 如果規則有寫「代換前卡號」(如 2902/1500)，則只用它來比對。
-            # 只有當規則沒有寫代換前卡號時，才用 Card_No (如 2902) 來比對。
-            # 這能防止資料中的 2902 誤匹配到 2902/1500 的規則。
             match_key = original_card if (pd.notna(original_card) and original_card != '' and original_card.lower() != 'nan') else target_card
             
             if not match_key:
@@ -105,7 +103,7 @@ class CardMapper:
             mask = (df_card_clean == match_key)
             
             # 銀行名稱篩選 (雙重保險)
-            target_bank = rule.get('Bank_Name', '')
+            target_bank = rule.get('bank_name', '')
             if target_bank and target_bank.lower() != 'nan':
                 if const.COL_BANK_NAME in df.columns:
                     mask = mask & (df[const.COL_BANK_NAME] == target_bank)
@@ -117,18 +115,18 @@ class CardMapper:
             # 4. 寫入與正規化
             # ==========================================
             
-            # (A) 卡號正規化與卡別 (不受排除清單影響，所有該卡交易皆需歸戶)
+            # (A) 卡號正規化與卡別
             df.loc[mask, const.COL_CARD_NO] = target_card
             
-            val_type = rule.get('Card_Type')
+            val_type = rule.get('card_type')
             if pd.notna(val_type) and str(val_type).lower() != 'nan':
                 df.loc[mask, const.COL_CARD_TYPE] = str(val_type).strip()
 
-            # (B) 行動支付標籤與前綴 (僅套用於「非帳務性」交易)
+            # (B) 行動支付標籤與前綴
             eligible_mask = mask & (~is_account_record)
             
             if eligible_mask.any():
-                # 行動支付標籤
+                # 行動支付標籤 (保留目前 CSV 中的名稱)
                 val_mobile = rule.get('行動支付標籤')
                 if pd.notna(val_mobile) and str(val_mobile).lower() != 'nan':
                     mobile_str = str(val_mobile).strip()
@@ -137,7 +135,7 @@ class CardMapper:
                         df.loc[is_empty, const.COL_MOBILE_PAY] = mobile_str
                         df_mobile_clean.loc[is_empty] = mobile_str
 
-                # 前綴詞 (Temp_Prefix)
+                # 前綴詞
                 val_prefix = rule.get('加在消費明細摘要前方')
                 if pd.notna(val_prefix) and str(val_prefix).lower() != 'nan':
                     prefix_str = str(val_prefix).strip()

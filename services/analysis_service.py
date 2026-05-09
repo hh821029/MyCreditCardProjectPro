@@ -42,17 +42,17 @@ MATRIX_WINDOWS = [
 # ==========================================
 def clean_merchant_prefix(df: pd.DataFrame, config_dir: str) -> pd.DataFrame:
     """
-    讀取 dim_payment_gateway.csv，將 merchant_name 欄位中的前綴詞拔除
+    讀取 dim_payment_process.csv，將 merchant_name 欄位中的前綴詞拔除
     """
-    gateway_file = os.path.join(config_dir, 'dim_payment_gateway.csv')
-    if not os.path.exists(gateway_file):
-        logger.warning(f"⚠️ 找不到 {gateway_file}，略過前綴拔除處理。")
+    process_file = os.path.join(config_dir, 'dim_payment_process.csv')
+    if not os.path.exists(process_file):
+        logger.warning(f"⚠️ 找不到 {process_file}，略過前綴拔除處理。")
         return df
         
     try:
-        gateway_df = pd.read_csv(gateway_file)
-        # 過濾空值並去除頭尾空白
-        prefixes = gateway_df.get('Prefix_Label', pd.Series(dtype=str)).dropna().astype(str).str.strip()
+        process_df = pd.read_csv(process_file)
+        # 過濾空值並去除頭尾空白 (對應新欄位 process_prefix)
+        prefixes = process_df.get('process_prefix', pd.Series(dtype=str)).dropna().astype(str).str.strip()
         prefixes = prefixes[prefixes != '']
         
         if prefixes.empty:
@@ -64,7 +64,7 @@ def clean_merchant_prefix(df: pd.DataFrame, config_dir: str) -> pd.DataFrame:
         
         # 執行 Regex 替換並去除可能留下的空白
         df['merchant_name'] = df['merchant_name'].str.replace(pattern, '', regex=True).str.strip()
-        logger.info("🧹 已成功拔除 merchant_name 中的支付前綴詞。")
+        logger.info("🧹 已成功拔除 merchant_name 中的支付/處理前綴詞。")
         
     except Exception as e:
         logger.error(f"❌ 拔除商家前綴詞失敗: {e}", exc_info=True)
@@ -107,7 +107,8 @@ def run_analytics():
     merchants_config_path = os.path.join(CONFIG_DIR, 'dim_merchants.csv')
     if os.path.exists(merchants_config_path):
         df_merchants = pd.read_csv(merchants_config_path, dtype=str)
-        category_map = dict(zip(df_merchants['Merchant'], df_merchants['Category']))
+        # 修正：使用 snake_case 的 'merchant' 與 'category'
+        category_map = dict(zip(df_merchants['merchant'], df_merchants['category']))
         df_raw['category'] = df_raw['merchant_name'].map(category_map).fillna('未分類')
     else:
         logger.warning("⚠️ 找不到 dim_merchants.csv，所有交易將標記為 '未分類'")

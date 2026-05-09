@@ -48,15 +48,15 @@
 為解決 Excel 公式管理規則引用與「Before-After」對照困難的痛點，實作應遵循以下邏輯：
 1.  **資料源讀取**：一律從資料庫 `all_transactions` 讀取，並在 SQL 階段利用 `WHERE` 排除 `繳款`、`紅利折抵`、`各項費用`。
 2.  **瀑布式回饋引擎 (Waterfall Engine)**：
-    *   **Priority 排序**：由 `Priority` 欄位決定執行順序（數字越小越優先）。
-    *   **計算截斷 (Early Break)**：若規則 `Reward_Cal_Break` 為 `TRUE`，匹配後即停止該筆交易的後續計算。
+    *   **priority 排序**：由 `priority` 欄位決定執行順序（數字越小越優先）。
+    *   **計算截斷 (Early Break)**：若規則 `reward_cal_break` 為 `TRUE`，匹配後即停止該筆交易的後續計算。
     *   **條件比對順序**：在單條規則內，比對順序為：**日期/卡別 -> 支付方式 (mobile_payment) -> 商家名稱 (merchant_display)**。
 3.  **計算條件與日期處理**：
     *   **日期交集 (Date Intersection)**：規則最終適用區間 = `max(分配表起始, 定義表起始)` 至 `min(分配表結束, 定義表結束)`。
-    *   **外部名單關鍵字**：支援在 `merchant_display` 欄位填入 `NCCC_listed_merchant` 或 `general_reward_exclusion` 以自動引入對應 YAML 商家清單。
+    *   **外部名單關鍵字**：支援在 `merchant_display` 欄位填入 `nccc_listed_merchant` 或 `general_reward_exclusion` 以自動引入對應 YAML 商家清單。
 4.  **欄位對齊 (Schema)**：
-    *   `bridge_reward_rules.csv` 欄位：`Reward_Program`, `mobile_payment`, `merchant_display`, `Start_Date`, `End_Date`, `Merchant_Rate`, `Priority`, `Reward_Cal_Break`。
-    *   交易資料比對優先採用 `Card_Type` 作為卡片識別。
+    *   `bridge_reward_rules.csv` 關鍵欄位：`rules_reward_program`, `mobile_payment`, `merchant_display`, `start_date`, `end_date`, `merchant_rate`, `priority`, `reward_cal_break`。
+    *   交易資料比對優先採用 `card_type` 作為卡片識別。
 
 ## 8. README.md規範 (README.md)
 1.  **修改權限**：整個README.md的修改要事先詢問，並且僅提供文字跟修改建議。

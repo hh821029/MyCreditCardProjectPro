@@ -6,7 +6,7 @@ from .base import BaseCsvParser
 
 class EsunParser(BaseCsvParser):
     def __init__(self):
-        self.bank_id = 'esun_bank'
+        self.bank = const.Bank.ESUN
         self.encoding = 'utf-8-sig'
         self.header_keyword = "消費日"
         self.stop_at_keyword = None  # 玉山通常不需要，或是你可以設 "本期消費明細"
@@ -42,7 +42,7 @@ class EsunParser(BaseCsvParser):
         df.columns = df.columns.astype(str).str.strip()
         available = [c for c in self.mapping.keys() if c in df.columns]
         df = df[available].rename(columns=self.mapping)
-        df[const.COL_BANK_NAME] = self.bank_id
+        df[const.COL_BANK_NAME] = self.bank.bank_id
 
         # 3. [新增] 全域空白清洗 (White Space Cleanup)
         # 在處理邏輯之前，先把所有欄位內容的前後空白修掉，並將空字串轉為 None

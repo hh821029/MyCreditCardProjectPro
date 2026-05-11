@@ -269,8 +269,8 @@ class BasePdfParser(BaseBillParser):
     """
     [PDF 專用基底] 提供 PDF 解析通用的工具函式
     """
-    def __init__(self, bank_name: str):
-        self.bank_name = bank_name
+    def __init__(self, bank: const.Bank):
+        self.bank = bank
         self.target_columns = [
             const.COL_TXN_DATE, const.COL_POST_DATE, const.COL_MERCHANT,
             const.COL_CARD_NO, const.COL_PAY_AMOUNT, const.COL_CONV_DATE, 

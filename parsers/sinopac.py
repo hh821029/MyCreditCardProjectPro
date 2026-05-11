@@ -7,7 +7,7 @@ from parsers.base import BasePdfParser
 
 class SinopacBillParser(BasePdfParser):
     def __init__(self):
-        super().__init__(bank_name='sinopac_bank')
+        super().__init__(bank=const.Bank.SINOPAC)
 
     def parse(self, pdf_path: str) -> pd.DataFrame:
         """
@@ -80,7 +80,7 @@ class SinopacBillParser(BasePdfParser):
             df = pd.DataFrame(all_clean_rows, columns=self.target_columns)
             
             # 加上銀行名稱標籤
-            df[const.COL_BANK_NAME] = self.bank_name
+            df[const.COL_BANK_NAME] = self.bank.bank_id
 
             # 呼叫 BaseBillParser 的通用處理 (日期轉換與型態強制)
             df = self.transform_common_dates(df, pdf_path)

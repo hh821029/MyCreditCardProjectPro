@@ -1,6 +1,7 @@
 # const.py
 import pandas as pd
 import os
+from enum import Enum
 
 pd.set_option('future.no_silent_downcasting', True)
 
@@ -42,7 +43,7 @@ COL_IS_DUAL_CURRENCY = 'is_dual_currency'   # 是否為雙幣卡
 COL_FX_TYPE = 'fx_type'                     # 外幣交易類型 (一般消費、現金預借、分期付款)
 COL_ACTIVE_STATUS = 'active_status'         # 卡片狀態 (啟用/停用)
 COL_ENABLE_REWARD_CALC = 'enable_reward_calc'  # 是否啟用回饋計算
-COL_VPC_ID = 'vpc_id'                       # 虛擬卡 ID (用於分辨同一張實體卡的不同虛擬卡)
+COL_VPC_NO = 'vpc_no'                       # 虛擬卡 No (用於分辨同一張實體卡的不同虛擬卡)
 COL_VPC_TYPE = 'vpc_type'                   # 虛擬卡類型 (如: Apple Pay, Google Pay, Samsung Pay)
 
 
@@ -83,7 +84,8 @@ STANDARD_COLUMNS = [
     COL_CURRENCY, COL_CURR_AMOUNT, COL_CONV_DATE, 
     COL_PAY_AMOUNT, COL_PAY_CURR,
     COL_TXN_TYPE, COL_INS_PLN, COL_MOBILE_PAY, 
-    COL_CARD_NO, COL_CARD_TYPE, COL_BANK_NAME
+    COL_CARD_NO, COL_CARD_TYPE, COL_BANK_NAME,
+    COL_VPC_NO, COL_VPC_TYPE
 ]
 
 
@@ -92,13 +94,13 @@ STANDARD_COLUMNS = [
 # ==========================================
 # 4. 銀行關鍵字對照 (用來分派 Parser)
 # ==========================================
-BANK_KEYWORD_MAP = {
-    '玉山': 'esun',
-    '國泰': 'cube', '國泰世華': 'cube',
-    '中信': 'ctbc', '中國信託': 'ctbc',
-    '華南': 'hncb',
-    '永豐': 'sinopac', 'DAWAY': 'sinopac'
-}
+#BANK_KEYWORD_MAP = {
+#    '玉山': 'esun',
+#    '國泰': 'cube', '國泰世華': 'cube',
+#    '中信': 'ctbc', '中國信託': 'ctbc',
+#    '華南': 'hncb',
+#    '永豐': 'sinopac', 'DAWAY': 'sinopac'
+#}
 
 
 # ==========================================
@@ -129,7 +131,7 @@ COLUMN_TYPES = {
     COL_CARD_TYPE: 'str',
     COL_FX_TYPE: 'str',
     COL_BANK_NAME: 'str',
-    COL_VPC_ID: 'str',
+    COL_VPC_NO: 'str',
     COL_VPC_TYPE: 'str',
 
     # 消費關聯資訊
@@ -187,3 +189,102 @@ DB_PATH = os.path.join(OUTPUT_DIR, 'Bills.db')
 
 # 確保輸出目錄存在
 os.makedirs(OUTPUT_DIR, exist_ok=True)
+
+class Location(Enum):
+    TW = 'TW'
+    US = 'US'
+    JP = 'JP'
+
+def mapping_3to2():
+    return {
+        'TWN': 'TW', 'USA': 'US', 'JPN': 'JP', 'KOR': 'KR',
+        'HKG': 'HK', 'SGP': 'SG', 'GBR': 'GB', 'CHN': 'CN',
+        'IRL': 'IE', 'DEU': 'DE', 'FRA': 'FR', 'AUS': 'AU',
+        'VNM': 'VN', 'THA': 'TH', 'MYS': 'MY', 'IDN': 'ID'
+    }    
+
+class Currency(Enum):
+    TWD = 'TWD'
+    USD = 'USD'
+    JPY = 'JPY'
+    EUR = 'EUR'
+    HKD = 'HKD'
+    GBP = 'GBP'
+    AUD = 'AUD'
+    CAD = 'CAD'
+    CHF = 'CHF'
+    CNY = 'CNY'
+
+class Bank(Enum):
+    ESUN = ('esun','808',['玉山','esun'])
+    CATHAY = ('cube','013',['國泰','國泰世華','cathay','cube'])
+    CTBC = ('ctbc','822',['中信','中國信託','ctbc'])
+    HNCB = ('hncb','008',['華南','hncb'])
+    SINOPAC = ('sinopac','807',['永豐','DAWHO','DAWAY','sinopac'])
+
+    @property
+    def bank_id(self):
+        return self.value[0]
+    
+    @property
+    def bank_code(self):
+        return self.value[1]
+
+    @property
+    def bank_keywords_mapping(self):
+        return self.value[2]
+
+    @classmethod
+    def from_keyword(cls, text):
+        """
+        根據輸入字串(如檔名、銀行名)自動匹配對應的 Bank 成員。
+        取代原本 const.py 中的 BANK_KEYWORD_MAP。
+        """
+        if not text or not isinstance(text, str):
+            return None
+        
+        # 轉小寫進行匹配，增加容錯率
+        search_text = text.lower()
+        for bank in cls:
+            if any(kw.lower() in search_text for kw in bank.bank_keywords_mapping):
+                return bank
+        return None
+
+    @classmethod
+    def get_bank_by_keyword(cls, keyword: str):
+        """
+        根據輸入字串(如檔名、銀行名)自動匹配對應的 Bank 成員。
+        取代原本 const.py 中的 BANK_KEYWORD_MAP。(修正完後移除這行註解)
+        """
+        if not keyword or not isinstance(keyword, str):
+            return None
+        for bank in cls:
+            if keyword in bank.bank_keywords_mapping:
+                return bank
+        return None
+
+class RewardType(Enum):
+    CASHBACK_FLOOR = {'reward_unit_name':'cashback', 'conversion_rate': 1 ,'rounding_strategy': 'floor','rounding_digits': 0} # 1 cashback = 1 TWD
+    CASHBACK_ROUND = {'reward_unit_name':'cashback', 'conversion_rate': 1 ,'rounding_strategy': 'round','rounding_digits': 0} # 1 cashback = 1 TWD
+    TREEPOINTS = {'reward_unit_name':'tree_points', 'conversion_rate': 1 ,'rounding_strategy': 'round','rounding_digits': 0} # 1 tree point = 1 TWD
+    ESUNPOINT_FLOOR = {'reward_unit_name':'e_points', 'conversion_rate': 1 ,'rounding_strategy': 'floor','rounding_digits': 0}  # 1 e-point = 1 TWD
+    ESUNPOINT_ROUND = {'reward_unit_name':'e_points', 'conversion_rate': 1 ,'rounding_strategy': 'round','rounding_digits': 0}  # 1 e-point = 1 TWD
+    OPENPOINT = {'reward_unit_name':'openpoint', 'conversion_rate': 1 ,'rounding_strategy': 'round','rounding_digits': 2}   # 1 openpoint = 1 TWD, 但允許小數點後兩位
+    LINEPOINT = {'reward_unit_name':'line_points', 'conversion_rate': 1 ,'rounding_strategy': 'round','rounding_digits': 0}  # 1 line point = 1 TWD
+    HAMIPOINT = {'reward_unit_name':'hami_points', 'conversion_rate': 1 ,'rounding_strategy': 'round','rounding_digits': 0}  # 1 hami point = 1 TWD
+
+    @property
+    def reward_unit_name(self):
+        return self.value['reward_unit_name']
+    
+    @property
+    def conversion_rate(self):  
+        return self.value['conversion_rate']
+
+    @property
+    def rounding_strategy(self):
+        return self.value['rounding_strategy']
+    
+    @property
+    def rounding_digits(self):
+        return self.value['rounding_digits']

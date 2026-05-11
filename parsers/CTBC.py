@@ -5,7 +5,7 @@ from .base import BaseCsvParser
 
 class CTBCParser(BaseCsvParser):
     def __init__(self):
-        self.bank_id = 'ctbc_bank'
+        self.bank = const.Bank.CTBC
         self.encoding = 'cp950' # 關鍵設定
         self.header_keyword = "消費日"
         self.stop_at_keyword = None
@@ -30,8 +30,8 @@ class CTBCParser(BaseCsvParser):
         df.columns = df.columns.astype(str).str.strip()
         available = [c for c in self.mapping.keys() if c in df.columns]
         df = df[available].rename(columns=self.mapping)
-        df[const.COL_BANK_NAME] = self.bank_id
-        
+        df[const.COL_BANK_NAME] = self.bank.bank_id
+
         df[const.COL_PAY_AMOUNT] = self._clean_amount(df, const.COL_PAY_AMOUNT)
         
         df = self.transform_common_dates(df, filepath)

@@ -55,25 +55,29 @@ class CardMapper:
         """
         核心邏輯：
         1. 絕對粉碎機：清洗卡號 (去除 .0 與空白)
-        2. 精準唯一比對：每一行規則僅有一個 Match Key (代換前卡號優先)
-        3. 帳務排除：針對手續費、利息、折抵等非消費交易，不予標記行動支付標籤
+        2. [新增] 雙卡號拆解：針對 "NNNN / MMMM" 格式，提取虛擬卡號 (MMMM) 進行查詢 (XLOOKUP 邏輯)
+        3. 規則比對：精準唯一比對
+        4. 帳務排除：針對手續費、利息、折抵等非消費交易，不予標記行動支付標籤
         """
         if df.empty or const.COL_CARD_NO not in df.columns:
             return df
             
         # ==========================================
-        # 1. 原始資料清洗
+        # 1. 原始資料清洗與欄位初始化
         # ==========================================
         df[const.COL_CARD_NO] = df[const.COL_CARD_NO].astype(str).str.strip()
         df[const.COL_CARD_NO] = df[const.COL_CARD_NO].str.replace(r'\.0$', '', regex=True)
-        df[const.COL_CARD_NO] = df[const.COL_CARD_NO].str.replace(' ', '')
+        # 注意：此處不直接移除所有空白，以便處理 " / " 分隔符
         
-        df_card_clean = df[const.COL_CARD_NO].copy()
-
         if const.COL_MOBILE_PAY not in df.columns:
             df[const.COL_MOBILE_PAY] = '' 
         else:
             df[const.COL_MOBILE_PAY] = df[const.COL_MOBILE_PAY].fillna('')
+
+        if const.COL_VPC_NO not in df.columns:
+            df[const.COL_VPC_NO] = ''
+        if const.COL_VPC_TYPE not in df.columns:
+            df[const.COL_VPC_TYPE] = ''
 
         df_mobile_clean = df[const.COL_MOBILE_PAY].astype(str).str.strip()
         df_mobile_clean = df_mobile_clean.replace({'nan': '', 'None': ''})
@@ -86,60 +90,76 @@ class CardMapper:
         is_account_record = df[const.COL_MERCHANT].astype(str).str.contains(exclude_pattern, na=False)
 
         # ==========================================
-        # 3. 規則比對 (精準唯一模式)
+        # 3. 核心比對邏輯 (逐列處理以應對複雜邏輯)
         # ==========================================
-        for _, rule in self.rules.iterrows():
-            # 使用 snake_case key
-            target_card = rule.get('card_no', '')
-            original_card = rule.get('代換前卡號', '')
+        
+        # 建立 vpc_no 索引以便快速查詢 (XLOOKUP 基礎)
+        vpc_lookup = self.rules[self.rules['vpc_no'].fillna('') != ''].set_index('vpc_no')
+        
+        for idx, card_val in df[const.COL_CARD_NO].items():
+            card_str = str(card_val)
+            match_rule = None
             
-            # --- 決定比對標的 (Match Key) ---
-            match_key = original_card if (pd.notna(original_card) and original_card != '' and original_card.lower() != 'nan') else target_card
+            # --- A. 處理雙卡號 (NNNN / MMMM) ---
+            if ' / ' in card_str:
+                parts = [p.strip() for p in card_str.split('/')]
+                # 國泰格式：實體卡 / 虛擬卡
+                if len(parts) >= 2:
+                    physical_part = parts[0]
+                    virtual_part = parts[1]
+                    
+                    # 執行 XLOOKUP：查詢 vpc_no
+                    if virtual_part in vpc_lookup.index:
+                        match_rule = vpc_lookup.loc[virtual_part]
+                        if isinstance(match_rule, pd.DataFrame):
+                            match_rule = match_rule.iloc[0]
+                        
+                        # 更新當前行資訊
+                        df.at[idx, const.COL_CARD_NO] = physical_part
+                        df.at[idx, const.COL_VPC_NO] = virtual_part
+                        logger.debug(f"🔍 雙卡號匹配成功: {virtual_part} -> {match_rule.get('vpc_type')}")
             
-            if not match_key:
-                continue
+            # --- B. 處理一般卡號匹配 (若尚未由雙卡號成功匹配) ---
+            if match_rule is None:
+                clean_card = card_str.replace(' ', '')
+                # 比對 代換前卡號 或 card_no
+                cond = (self.rules['代換前卡號'] == clean_card) | (self.rules['card_no'] == clean_card)
+                matches = self.rules[cond]
+                if not matches.empty:
+                    match_rule = matches.iloc[0]
             
-            # 精準比對 (Exact Matching)
-            mask = (df_card_clean == match_key)
-            
-            # 銀行名稱篩選 (雙重保險)
-            target_bank = rule.get('bank_name', '')
-            if target_bank and target_bank.lower() != 'nan':
-                if const.COL_BANK_NAME in df.columns:
-                    mask = mask & (df[const.COL_BANK_NAME] == target_bank)
-
-            if not mask.any():
-                continue
-
             # ==========================================
-            # 4. 寫入與正規化
+            # 4. 寫入比對結果
             # ==========================================
-            
-            # (A) 卡號正規化與卡別
-            df.loc[mask, const.COL_CARD_NO] = target_card
-            
-            val_type = rule.get('card_type')
-            if pd.notna(val_type) and str(val_type).lower() != 'nan':
-                df.loc[mask, const.COL_CARD_TYPE] = str(val_type).strip()
+            if match_rule is not None:
+                # 實體卡號與卡別
+                target_card = match_rule.get('card_no', '')
+                if target_card:
+                    df.at[idx, const.COL_CARD_NO] = str(target_card).replace('.0', '')
+                
+                val_type = match_rule.get('card_type')
+                if pd.notna(val_type) and str(val_type).lower() != 'nan':
+                    df.at[idx, const.COL_CARD_TYPE] = str(val_type).strip()
 
-            # (B) 行動支付標籤與前綴
-            eligible_mask = mask & (~is_account_record)
-            
-            if eligible_mask.any():
-                # 行動支付標籤 (保留目前 CSV 中的名稱)
-                val_mobile = rule.get('行動支付標籤')
-                if pd.notna(val_mobile) and str(val_mobile).lower() != 'nan':
-                    mobile_str = str(val_mobile).strip()
-                    is_empty = eligible_mask & (df_mobile_clean == '')
-                    if is_empty.any():
-                        df.loc[is_empty, const.COL_MOBILE_PAY] = mobile_str
-                        df_mobile_clean.loc[is_empty] = mobile_str
+                # vpc_type (OEM Pay 類型)
+                val_vpc_type = match_rule.get('vpc_type')
+                if pd.notna(val_vpc_type) and str(val_vpc_type).lower() != 'nan':
+                    df.at[idx, const.COL_VPC_TYPE] = str(val_vpc_type).strip()
 
-                # 前綴詞
-                val_prefix = rule.get('加在消費明細摘要前方')
-                if pd.notna(val_prefix) and str(val_prefix).lower() != 'nan':
-                    prefix_str = str(val_prefix).strip()
-                    if prefix_str:
-                        df.loc[eligible_mask, '_Temp_Prefix'] = prefix_str
+                # 行動支付標籤與前綴 (排除帳務紀錄)
+                if not is_account_record[idx]:
+                    # 分離邏輯：若已有 vpc_type (OEM Pay)，則不填入 mobile_payment (第三方支付)
+                    current_vpc = df.at[idx, const.COL_VPC_TYPE]
+                    if not current_vpc:
+                        val_mobile = match_rule.get('行動支付標籤')
+                        if pd.notna(val_mobile) and str(val_mobile).lower() != 'nan':
+                            df.at[idx, const.COL_MOBILE_PAY] = str(val_mobile).strip()
+
+                    # 前綴詞
+                    val_prefix = match_rule.get('加在消費明細摘要前方')
+                    if pd.notna(val_prefix) and str(val_prefix).lower() != 'nan':
+                        prefix_str = str(val_prefix).strip()
+                        if prefix_str:
+                            df.at[idx, '_Temp_Prefix'] = prefix_str
         
         return df

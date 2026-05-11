@@ -74,6 +74,9 @@ class PaymentProcessTagger:
 
         merchants = df[const.COL_MERCHANT].astype(str).str.strip()
         
+        # 定義 OEM Pay 清單 (這些關鍵字會被歸類到 vpc_type 而非 mobile_payment)
+        oem_pay_keywords = ['Apple Pay', 'Google Pay', 'Samsung Pay', 'Garmin Pay', 'Hami Pay', 'Google Wallet']
+
         for _, rule in self.rules.iterrows():
             # 使用新的統一命名規範
             pattern = rule.get(const.COL_PROCESS_PATTERN) or rule.get('payment_process_pattern')
@@ -84,14 +87,29 @@ class PaymentProcessTagger:
             
             try:
                 mask = merchants.str.contains(pattern, case=False, regex=True, na=False)
-                target_mask = mask & (df[const.COL_MOBILE_PAY] == '')
                 
-                if target_mask.any():
+                if mask.any():
                     if pd.notna(process_name):
-                        df.loc[target_mask, const.COL_MOBILE_PAY] = process_name
+                        val_process = str(process_name).strip()
+                        # 判斷是否屬於 OEM Pay
+                        is_oem = any(oem.lower() in val_process.lower() for oem in oem_pay_keywords)
+                        
+                        if is_oem:
+                            # 填入 vpc_type (僅在原本為空時填入)
+                            vpc_empty = mask & (df[const.COL_VPC_TYPE].fillna('') == '')
+                            if vpc_empty.any():
+                                df.loc[vpc_empty, const.COL_VPC_TYPE] = val_process
+                        else:
+                            # 填入 mobile_payment (僅在原本為空時填入)
+                            mobile_empty = mask & (df[const.COL_MOBILE_PAY].fillna('') == '')
+                            if mobile_empty.any():
+                                df.loc[mobile_empty, const.COL_MOBILE_PAY] = val_process
                     
                     if pd.notna(prefix):
-                        df.loc[target_mask, '_Temp_Prefix'] = prefix
+                        # 檢查是否存在 _Temp_Prefix 欄位
+                        if '_Temp_Prefix' not in df.columns:
+                            df['_Temp_Prefix'] = ''
+                        df.loc[mask, '_Temp_Prefix'] = prefix
                         
             except re.error:
                 continue

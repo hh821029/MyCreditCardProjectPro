@@ -19,6 +19,8 @@ def ALL_TRANSACTION_COL_MAPPING():
             const.COL_CONSUMPTION_PLACE: 'consumption_place',
             const.COL_TXN_TYPE: 'transaction_type',
             const.COL_MOBILE_PAY: 'mobile_payment',     # 行動支付註記
+            const.COL_VPC_NO: 'vpc_no',                 # 虛擬卡 No
+            const.COL_VPC_TYPE: 'vpc_type',             # 虛擬卡類型
             const.COL_CATEGORY: 'category',             # 商業分類欄位
             const.COL_SUB_CATEGORY: 'sub_category',     # 商業次分類欄位
             const.COL_CURRENCY: 'currency_type',        # 消費幣別
@@ -37,7 +39,7 @@ def CARD_INFO_COL_MAPPING():
         'card_no': 'card_no',
         'is_active': 'is_active',
         'enable_reward_calc': 'enable_reward_calc',
-        'vpc_id': 'vpc_id',
+        'vpc_no': 'vpc_no',
         'vpc_type': 'vpc_type'
     }
 
@@ -100,6 +102,7 @@ def REWARD_RULE_COL_MAPPING():
     return {
         'reward_program': 'reward_program',
         'mobile_payment': 'mobile_payment',
+        'vpc_type': 'vpc_type',
         'merchant_display': 'merchant_display',
         'start_date': 'start_date',
         'end_date': 'end_date',
@@ -108,10 +111,4 @@ def REWARD_RULE_COL_MAPPING():
         'reward_cal_break': 'reward_cal_break'
     }
 
-def mapping_3to2():
-    return {
-        'TWN': 'TW', 'USA': 'US', 'JPN': 'JP', 'KOR': 'KR',
-        'HKG': 'HK', 'SGP': 'SG', 'GBR': 'GB', 'CHN': 'CN',
-        'IRL': 'IE', 'DEU': 'DE', 'FRA': 'FR', 'AUS': 'AU',
-        'VNM': 'VN', 'THA': 'TH', 'MYS': 'MY', 'IDN': 'ID'
-    }
+

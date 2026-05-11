@@ -5,7 +5,7 @@ from .base import BaseHtmlParser # <--- 改繼承這個
 
 class HNCBParser(BaseHtmlParser):
     def __init__(self):
-        self.bank_id = 'hncb_bank'
+        self.bank = const.Bank.HNCB
         self.encoding = 'big5'      # 華南通常是 Big5
         self.header_keyword = "消費日"
         self.stop_at_keyword = "立即繳費" # 遇到這行就停止
@@ -41,7 +41,7 @@ class HNCBParser(BaseHtmlParser):
         # 欄位名稱已經在 read_html_smart 清洗過去除空白了，直接對應即可
         available = [c for c in self.mapping.keys() if c in df.columns]
         df = df[available].rename(columns=self.mapping)
-        df[const.COL_BANK_NAME] = self.bank_id
+        df[const.COL_BANK_NAME] = self.bank.bank_id
 
         # 3. 卡號提取邏輯 (_extract_card_info)
         df = self.extract_card_info_generic(df, self.card_extraction_config)

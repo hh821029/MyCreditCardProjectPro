@@ -7,7 +7,7 @@ from .base import BaseCsvParser
 
 class CubeParser(BaseCsvParser):
     def __init__(self):
-        self.bank_id = 'cube_bank'
+        self.bank = const.Bank.CATHAY
         self.encoding = 'utf-8-sig'
         self.header_keyword = "消費日"
         self.stop_at_keyword = "正卡消費" # <--- YAML 設定在此生效
@@ -33,7 +33,7 @@ class CubeParser(BaseCsvParser):
         df.columns = clean_headers
         available = [c for c in self.mapping.keys() if c in df.columns]
         df = df[available].rename(columns=self.mapping)
-        df[const.COL_BANK_NAME] = self.bank_id
+        df[const.COL_BANK_NAME] = self.bank.bank_id
 
         # 3. 清洗國泰專屬的「偽空值」符號
         #    把獨立存在的 "-", "−", "－" 轉為真正的 NaN(修正成對應的空值型態)

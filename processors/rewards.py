@@ -135,6 +135,12 @@ class RewardsCalculator:
         if df_bills.empty: return df_bills
 
         df = df_bills.copy()
+        
+        # [安全檢查] 確保所有標準欄位存在，避免 KeyError
+        for col in [const.COL_MOBILE_PAY, const.COL_VPC_NO, const.COL_VPC_TYPE]:
+            if col not in df.columns:
+                df[col] = ''
+        
         df[const.COL_TXN_DATE] = pd.to_datetime(df[const.COL_TXN_DATE])
         
         # 初始化回饋追蹤欄位
@@ -163,13 +169,17 @@ class RewardsCalculator:
                 mask = mask & (df[const.COL_BANK_NAME] == rule['bank_name'])
             
             # 2. 支付、地點與商家過濾
-            # 2-1. 行動支付匹配
+            # 2-1. 行動支付匹配 (整合 mobile_payment 與 vpc_type)
             if pd.notna(rule.get('mobile_payment')) and rule['mobile_payment'] != '':
                 target_pay = str(rule['mobile_payment'])
                 if target_pay == "實體卡":
-                    mobile_mask = df[const.COL_MOBILE_PAY].fillna('').isin(['', '實體卡'])
+                    # 實體卡定義：mobile_payment 與 vpc_type 皆為空
+                    mobile_mask = (df[const.COL_MOBILE_PAY].fillna('') == '') & \
+                                  (df[const.COL_VPC_TYPE].fillna('') == '')
                 else:
-                    mobile_mask = df[const.COL_MOBILE_PAY].astype(str).str.contains(target_pay, case=False, regex=True, na=False)
+                    # 支援 regex 匹配，同時檢查 mobile_payment 欄位與新的 vpc_type 欄位
+                    mobile_mask = df[const.COL_MOBILE_PAY].astype(str).str.contains(target_pay, case=False, regex=True, na=False) | \
+                                  df[const.COL_VPC_TYPE].astype(str).str.contains(target_pay, case=False, regex=True, na=False)
                 mask = mask & mobile_mask
             
             # 2-2. 消費地點匹配

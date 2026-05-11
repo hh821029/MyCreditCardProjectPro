@@ -63,27 +63,28 @@ def get_parser(filename: str):
     """
     根據檔名特徵，回傳對應的 Parser 實例
     """
+    bank = const.Bank.from_keyword(filename)
     filename_lower = filename.lower()
     
     # 1. 永豐 (PDF)
-    if '永豐' in filename_lower or 'daway' in filename_lower:
+    if bank == const.Bank.SINOPAC:
         if filename_lower.endswith('.pdf'):
             return SinopacBillParser()
             
     # 2. 玉山 (CSV)
-    if '玉山' in filename_lower and filename_lower.endswith('.csv'):
+    if bank == const.Bank.ESUN and filename_lower.endswith('.csv'):
         return EsunParser()
 
     # 3. 國泰 (CSV)
-    if ('國泰' in filename_lower or 'cube' in filename_lower) and filename_lower.endswith('.csv'):
+    if bank == const.Bank.CATHAY and filename_lower.endswith('.csv'):
         return CubeParser()
 
     # 4. 中信 (CSV)
-    if ('中國信託' in filename_lower or 'ctbc' in filename_lower) and filename_lower.endswith('.csv'):
+    if bank == const.Bank.CTBC and filename_lower.endswith('.csv'):
         return CTBCParser()
 
     # 5. 華南 (HTML/XLS)
-    if '華南' in filename_lower and (filename_lower.endswith('.xls') or filename_lower.endswith('.html')):
+    if bank == const.Bank.HNCB and (filename_lower.endswith('.xls') or filename_lower.endswith('.html')):
         return HNCBParser()
 
     return None

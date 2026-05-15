@@ -123,30 +123,37 @@ class BaseBillParser:
         """
         最終正規化邏輯：
         1. 補齊基本欄位 (確保 Standard Columns 存在)
-        2. 處理 Payment_Currency：若有金額但無幣別，預設補 TWD
-        3. 處理 Currency_Type：若有金額但無幣別，預設補 TWD
+        2. 處理 Payment_Currency：若有金額但無幣別，預設補 TWD；並進行 Enum 標準化
+        3. 處理 Currency_Type：若有金額但無幣別，預設補 TWD；並進行 Enum 標準化
+        4. 處理 Location：進行 Enum 標準化 (Alpha-3 轉 Alpha-2)
         """
         # 1. 處理 Payment_Currency
         if const.COL_PAY_AMOUNT in df.columns:
             if const.COL_PAY_CURR not in df.columns:
                 df[const.COL_PAY_CURR] = 'TWD'
             else:
-                # 補缺失值
                 df[const.COL_PAY_CURR] = df[const.COL_PAY_CURR].fillna('TWD')
-                # 處理空字串
                 mask_empty = (df[const.COL_PAY_CURR].astype(str).str.strip() == '')
                 df.loc[mask_empty, const.COL_PAY_CURR] = 'TWD'
+            
+            # Enum 標準化 (如: NTD -> TWD)
+            df[const.COL_PAY_CURR] = df[const.COL_PAY_CURR].apply(lambda x: const.Currency.normalize(x))
 
         # 2. 處理 Currency_Type (原始幣別)
         if const.COL_CURR_AMOUNT in df.columns:
             if const.COL_CURRENCY not in df.columns:
                  df[const.COL_CURRENCY] = 'TWD'
             else:
-                # 補缺失值
                 df[const.COL_CURRENCY] = df[const.COL_CURRENCY].fillna('TWD')
-                # 處理空字串
                 mask_empty = (df[const.COL_CURRENCY].astype(str).str.strip() == '')
                 df.loc[mask_empty, const.COL_CURRENCY] = 'TWD'
+            
+            # Enum 標準化
+            df[const.COL_CURRENCY] = df[const.COL_CURRENCY].apply(lambda x: const.Currency.normalize(x))
+
+        # 3. 處理 Location (國別標準化: TWN -> TW)
+        if const.COL_LOCATION in df.columns:
+            df[const.COL_LOCATION] = df[const.COL_LOCATION].apply(lambda x: const.Location.normalize(x))
 
         return df
 

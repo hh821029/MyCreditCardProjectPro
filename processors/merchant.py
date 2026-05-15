@@ -12,43 +12,63 @@ class MerchantNormalizer:
     def __init__(self, config_dir: str, rules: pd.DataFrame = None):
         """
         商戶名稱正規化處理器
-        :param rules: 由外部注入的規則 DataFrame (包含 Pattern, Replacement, Category)
+        :param rules: 由外部注入的規則 DataFrame (包含 pattern, merchant/merchant_display, category, priority)
         """
-        # 如果沒有傳入規則，則初始化為空，不再自行讀檔
+        # 如果沒有傳入規則，則初始化為空
         self.rules = rules if rules is not None else pd.DataFrame()
+        # 根據 priority 排序 (1 為最高優先級)
+        if not self.rules.empty and 'priority' in self.rules.columns:
+            # 確保 priority 是數值型別
+            self.rules['priority'] = pd.to_numeric(self.rules['priority'], errors='coerce').fillna(999)
+            self.rules = self.rules.sort_values('priority', ascending=True)
 
-    def process(self, df: pd.DataFrame) -> pd.DataFrame:
-        if self.rules.empty or df.empty: return df
+    def process(self, df: pd.DataFrame, return_mask: bool = False) -> pd.DataFrame:
+        if self.rules.empty or df.empty: 
+            return (df, pd.Series(False, index=df.index)) if return_mask else df
 
-        if const.COL_CATEGORY not in df.columns: df[const.COL_CATEGORY] = None
-        # 確保 Merchant_Display 存在，初始值等於原始 Merchant
+        # 初始化必要欄位
+        if const.COL_CATEGORY not in df.columns: 
+            df[const.COL_CATEGORY] = None
         if const.COL_MERCHANT_DISPLAY not in df.columns:
             df[const.COL_MERCHANT_DISPLAY] = df[const.COL_MERCHANT]
+        
+        # 使用暫存欄位追蹤是否已處理過，避免重複匹配
+        processed_mask = pd.Series(False, index=df.index)
         
         merchants = df[const.COL_MERCHANT].astype(str).str.strip()
         
         for _, rule in self.rules.iterrows():
-            # 優先使用 snake_case 與當前 CSV 標題
-            pattern = rule.get('pattern')
-            replacement = rule.get('merchant') or rule.get('merchant_display')
+            # 支援多種可能的欄位名稱 (相容新舊格式)
+            pattern = rule.get('merchant_patterns') or rule.get('pattern')
+            replacement = rule.get('merchant_display') or rule.get('merchant')
             category = rule.get('category')
             
             if pd.isna(pattern) or pattern == '': continue
 
             try:
+                # 執行正則匹配
                 mask = merchants.str.contains(pattern, case=False, regex=True, na=False)
             except re.error:
+                logger.warning(f"⚠️ 無法解析商家正規化正則表達式: {pattern}")
                 continue
 
             if mask.any():
-                target_mask = mask & df[const.COL_CATEGORY].isna()
+                # 僅針對「尚未被更高優先級規則處理」的交易進行更新
+                target_mask = mask & (~processed_mask)
+                
                 if target_mask.any():
-                    if pd.notna(replacement) and replacement != '':
-                        # 修改 Merchant_Display 而非 Merchant
+                    # 更新商家顯示名稱
+                    if pd.notna(replacement) and str(replacement).strip() != '':
                         df.loc[target_mask, const.COL_MERCHANT_DISPLAY] = replacement
-                    if pd.notna(category) and category != '':
+                    
+                    # 更新分類 (若規則有提供)
+                    if pd.notna(category) and str(category).strip() != '':
                         df.loc[target_mask, const.COL_CATEGORY] = category
-        return df
+                    
+                    # 標記為已處理
+                    processed_mask |= target_mask
+                    
+        return (df, processed_mask) if return_mask else df
 
 
 class PaymentProcessTagger:
@@ -60,6 +80,9 @@ class PaymentProcessTagger:
         :param rules: 由外部注入的規則 DataFrame (包含 payment_process_pattern, process_prefix, payment_process)
         """
         self.rules = rules if rules is not None else pd.DataFrame()
+        if not self.rules.empty and 'priority' in self.rules.columns:
+            self.rules['priority'] = pd.to_numeric(self.rules['priority'], errors='coerce').fillna(999)
+            self.rules = self.rules.sort_values('priority', ascending=True)
 
     def process(self, df: pd.DataFrame) -> pd.DataFrame:
         if self.rules.empty or df.empty: return df
@@ -111,6 +134,49 @@ class PaymentProcessTagger:
                             df['_Temp_Prefix'] = ''
                         df.loc[mask, '_Temp_Prefix'] = prefix
                         
+            except re.error:
+                continue
+                
+        return df
+
+
+class ECPlatformTagger:
+    """
+    負責標記電商平台 (如 MOMO, 蝦皮, STEAM)
+    """
+    def __init__(self, config_dir: str, rules: pd.DataFrame = None):
+        """
+        :param rules: 由外部注入的規則 DataFrame (包含 ec_platform_pattern, ec_platform, priority)
+        """
+        self.rules = rules if rules is not None else pd.DataFrame()
+        if not self.rules.empty and 'priority' in self.rules.columns:
+            self.rules['priority'] = pd.to_numeric(self.rules['priority'], errors='coerce').fillna(999)
+            self.rules = self.rules.sort_values('priority', ascending=True)
+
+    def process(self, df: pd.DataFrame) -> pd.DataFrame:
+        if self.rules.empty or df.empty: return df
+
+        if const.COL_EC_PLATFORM not in df.columns:
+            df[const.COL_EC_PLATFORM] = ''
+        else:
+            df[const.COL_EC_PLATFORM] = df[const.COL_EC_PLATFORM].fillna('')
+
+        merchants = df[const.COL_MERCHANT].astype(str).str.strip()
+
+        for _, rule in self.rules.iterrows():
+            pattern = rule.get('ec_platform_pattern')
+            platform_name = rule.get('ec_platform')
+            
+            if pd.isna(pattern) or pattern == '': continue
+            
+            try:
+                mask = merchants.str.contains(pattern, case=False, regex=True, na=False)
+                
+                if mask.any():
+                    # 僅在原本為空時填入 (遵循 priority 順序)
+                    empty_mask = mask & (df[const.COL_EC_PLATFORM] == '')
+                    if empty_mask.any():
+                        df.loc[empty_mask, const.COL_EC_PLATFORM] = platform_name
             except re.error:
                 continue
                 

@@ -122,12 +122,13 @@ class EsunParser(BaseCsvParser):
         )
 
         # 2. 篩選出含有 "e point" (不分大小寫) 的交易
-        mask = df[const.COL_MERCHANT].fillna('').astype(str).str.contains('e\s*point', case=False, regex=True)
-        
+        mask = df[const.COL_MERCHANT].fillna('').astype(str).str.contains(r'e\s*point', case=False, regex=True)
+
         if mask.any():
             # 3. 定義 Regex (更寬鬆的匹配)
             # 匹配： "折" + (任意字元) + "現金" + (空白) + (數字/逗號) + (空白) + "元"
             pattern = r'折.*?現金\s*([0-9,]+)\s*元'
+
             
             # 4. 提取金額
             extracted = df.loc[mask, const.COL_MERCHANT].astype(str).str.extract(pattern)[0]

@@ -9,6 +9,7 @@ from configs.db_columns_mapping import (
     REWARD_CAMPAIGN_COL_MAPPING,
     MERCHANT_COL_MAPPING,
     PAYMENT_PROCESS_COL_MAPPING,
+    EC_PLATFORM_COL_MAPPING,
     REWARD_RULE_COL_MAPPING
 )
 
@@ -80,6 +81,16 @@ class ConfigSyncManager:
             strategy='append'  # 支付/處理流程資料以合併方式處理
         )
 
+    def sync_ec_platforms(self):
+        self._sync_item(
+            "電商平台", 
+            "dim_ec_platform", 
+            "dim_ec_platforms", 
+            EC_PLATFORM_COL_MAPPING, 
+            indices=['ec_platform', 'ec_platform_pattern'],
+            strategy='append'
+        )
+
     def sync_reward_base(self):
         """同步基礎回饋計畫"""
         self._sync_item(
@@ -117,6 +128,7 @@ class ConfigSyncManager:
         self.sync_cards()
         self.sync_merchants()
         self.sync_payment_processes()
+        self.sync_ec_platforms()
         self.sync_reward_base()
         self.sync_reward_campaigns()
         self.sync_reward_rules()

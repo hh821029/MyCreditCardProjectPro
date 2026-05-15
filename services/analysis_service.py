@@ -63,8 +63,8 @@ def clean_merchant_prefix(df: pd.DataFrame, config_dir: str) -> pd.DataFrame:
         pattern = r'^(' + r'|'.join(escaped_prefixes) + r')'
         
         # 執行 Regex 替換並去除可能留下的空白
-        df['merchant_name'] = df['merchant_name'].str.replace(pattern, '', regex=True).str.strip()
-        logger.info("🧹 已成功拔除 merchant_name 中的支付/處理前綴詞。")
+        df['merchant_display'] = df['merchant_display'].str.replace(pattern, '', regex=True).str.strip()
+        logger.info("🧹 已成功拔除 merchant_display 中的支付/處理前綴詞。")
         
     except Exception as e:
         logger.error(f"❌ 拔除商家前綴詞失敗: {e}", exc_info=True)
@@ -85,7 +85,7 @@ def run_analytics():
     with sqlite3.connect(DB_PATH) as conn:
         logger.info("📥 讀取清洗完畢的交易資料...")
         sql = """
-        SELECT transaction_id, transaction_date, merchant_name, 
+        SELECT transaction_id, transaction_date, merchant_display, 
                mobile_payment, payment_amount, 
                transaction_type, bank_name, card_type
         FROM all_transactions
@@ -107,9 +107,9 @@ def run_analytics():
     merchants_config_path = os.path.join(CONFIG_DIR, 'dim_merchants.csv')
     if os.path.exists(merchants_config_path):
         df_merchants = pd.read_csv(merchants_config_path, dtype=str)
-        # 修正：使用 snake_case 的 'merchant' 與 'category'
-        category_map = dict(zip(df_merchants['merchant'], df_merchants['category']))
-        df_raw['category'] = df_raw['merchant_name'].map(category_map).fillna('未分類')
+        # 修正：使用 snake_case 的 'merchant_display' 與 'category'
+        category_map = dict(zip(df_merchants['merchant_display'], df_merchants['category']))
+        df_raw['category'] = df_raw['merchant_display'].map(category_map).fillna('未分類')
     else:
         logger.warning("⚠️ 找不到 dim_merchants.csv，所有交易將標記為 '未分類'")
         df_raw['category'] = '未分類'

@@ -6,6 +6,18 @@
 
 ## 2. 架構維護與資料流程原則 (Architectural Integrity)
 - **服務化架構 (Service-Oriented)**：核心邏輯應封裝於 `services/` 資料夾中（如 `etl_service.py`, `analysis_service.py`），以供 CLI 與 API 共同呼叫。
+- **商家名稱清洗與合併規範**：
+    *   **欄位 SSOT 定義**：
+        *   `merchant`: 銀行原始名稱（不變）。
+        *   `merchant_display`: 最終顯示名稱。
+        *   `payment_process`: 支付管道名稱。
+        *   `ec_platform`: 電商平台名稱。
+    *   **合併公式**：`[支付前綴]－[電商平台]－[正規化商家]`
+    *   **處理順序**：
+        1.  識別電商平台並標記於 `ec_platform`。
+        2.  識別支付管道並暫存前綴。
+        3.  執行商家正規化 (Merchant Normalization)。
+        4.  執行最終合併，自動處理空值與全形連字號 `－`。
 - **變數命名保護**：變數命名時應注意後續處理的一致性。
 - **檔案編碼設定**：所有附檔名是.py跟特定資料夾(如output、configs)內的csv檔案，編碼均使用 `UTF-8` 編碼（預設不含BOM）。
 - **資料修改範圍最小化原則**：資料和程式邏輯修改範圍限制在使用者指定的範圍內，任何大範圍變更都先跟使用者確認。

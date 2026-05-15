@@ -52,7 +52,7 @@ def run_rewards_calculation():
         configs = {
             'reward_rules': ConfigLoader.load_config(CONFIG_DIR, 'bridge_reward_rules', strategy='replace'),
             'rewards_base': ConfigLoader.load_config(CONFIG_DIR, 'dim_card_rewards_base', strategy='replace'),
-            'rewards_campaigns': ConfigLoader.load_config(CONFIG_DIR, 'dim_card_rewards_campaigns', strategy='replace')
+            'rewards_campaigns': ConfigLoader.load_config(CONFIG_DIR, 'dim_card_rewards_campaigns', strategy='append')
         }
 
         # 3. 執行計算

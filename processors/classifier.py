@@ -52,7 +52,7 @@ class TransactionClassifier:
         
         target_mask = mask_empty & mask_keyword
         if target_mask.any():
-            df.loc[target_mask, const.COL_TXN_TYPE] = '繳款'
+            df.loc[target_mask, const.COL_TXN_TYPE] = const.TransactionType.PAYMENT.label
 
             # --- 資料整理: 繳款 ---
             # 1. 淨空卡片資訊
@@ -82,7 +82,7 @@ class TransactionClassifier:
         
         target_mask = mask_empty & mask_keyword
         if target_mask.any():
-            df.loc[target_mask, const.COL_TXN_TYPE] = '紅利折抵'
+            df.loc[target_mask, const.COL_TXN_TYPE] = const.TransactionType.REDEMPTION.label
             
             # --- 資料整理: 紅利折抵 ---
             # 1. 消費地標準化
@@ -94,8 +94,8 @@ class TransactionClassifier:
             df.loc[pay_curr_empty, const.COL_PAY_CURR] = df.loc[pay_curr_empty, const.COL_CURRENCY]
             
             # 2-2. 仍為空則補 TWD
-            pay_curr_still_missing = target_mask & (df[const.COL_PAY_CURR].isna() | (df[const.COL_PAY_CURR] == ''))
-            df.loc[pay_curr_still_missing, const.COL_PAY_CURR] = 'TWD'
+            #pay_curr_still_missing = target_mask & (df[const.COL_PAY_CURR].isna() | (df[const.COL_PAY_CURR] == ''))
+            #df.loc[pay_curr_still_missing, const.COL_PAY_CURR] = 'TWD'
             
             # 3. 金額整理: Payment_Amount 若無值則從 Currency_Amount 複製
             pay_amt_empty = target_mask & (df[const.COL_PAY_AMOUNT].isna() | (df[const.COL_PAY_AMOUNT] == ''))
@@ -114,7 +114,7 @@ class TransactionClassifier:
         
         target_mask = mask_empty & mask_keyword
         if target_mask.any():
-            df.loc[target_mask, const.COL_TXN_TYPE] = '各項費用'
+            df.loc[target_mask, const.COL_TXN_TYPE] = const.TransactionType.FEE.label
             
             # --- 資料整理: 各項費用 ---
             # 1. 消費地標準化
@@ -124,8 +124,8 @@ class TransactionClassifier:
             pay_curr_empty = target_mask & (df[const.COL_PAY_CURR].isna() | (df[const.COL_PAY_CURR] == ''))
             df.loc[pay_curr_empty, const.COL_PAY_CURR] = df.loc[pay_curr_empty, const.COL_CURRENCY]
             
-            pay_curr_still_missing = target_mask & (df[const.COL_PAY_CURR].isna() | (df[const.COL_PAY_CURR] == ''))
-            df.loc[pay_curr_still_missing, const.COL_PAY_CURR] = 'TWD'
+            #pay_curr_still_missing = target_mask & (df[const.COL_PAY_CURR].isna() | (df[const.COL_PAY_CURR] == ''))
+            #df.loc[pay_curr_still_missing, const.COL_PAY_CURR] = 'TWD'
             
             df.loc[target_mask, const.COL_CURRENCY] = df.loc[target_mask, const.COL_PAY_CURR]
             
@@ -133,8 +133,8 @@ class TransactionClassifier:
             pay_amt_empty = target_mask & (df[const.COL_PAY_AMOUNT].isna() | (df[const.COL_PAY_AMOUNT] == ''))
             df.loc[pay_amt_empty, const.COL_PAY_AMOUNT] = df.loc[pay_amt_empty, const.COL_CURR_AMOUNT]
             
-            curr_amt_empty = target_mask & (df[const.COL_CURR_AMOUNT].isna() | (df[const.COL_CURR_AMOUNT] == ''))
-            df.loc[curr_amt_empty, const.COL_CURR_AMOUNT] = df.loc[curr_amt_empty, const.COL_PAY_AMOUNT]
+            #curr_amt_empty = target_mask & (df[const.COL_CURR_AMOUNT].isna() | (df[const.COL_CURR_AMOUNT] == ''))
+            #df.loc[curr_amt_empty, const.COL_CURR_AMOUNT] = df.loc[curr_amt_empty, const.COL_PAY_AMOUNT]
             
         return df
 
@@ -154,7 +154,7 @@ class TransactionClassifier:
         
         target_mask = mask_empty & mask_negative
         if target_mask.any():
-            df.loc[target_mask, const.COL_TXN_TYPE] = '退刷'
+            df.loc[target_mask, const.COL_TXN_TYPE] = const.TransactionType.REFUND.label
             
         return df
 
@@ -167,16 +167,16 @@ class TransactionClassifier:
         if len(target_indices) > 0:
             if const.COL_CURRENCY in df.columns and const.COL_PAY_CURR in df.columns:
                 mask_diff = df.loc[target_indices, const.COL_CURRENCY] != df.loc[target_indices, const.COL_PAY_CURR]
-                df.loc[target_indices[mask_diff], const.COL_TXN_TYPE] = '一般國外交易'
+                df.loc[target_indices[mask_diff], const.COL_TXN_TYPE] = const.TransactionType.FOREIGN.label
                 
                 same_indices = target_indices[~mask_diff]
                 if len(same_indices) > 0:
                     mask_twd = df.loc[same_indices, const.COL_CURRENCY] == 'TWD'
                     twd_indices = same_indices[mask_twd]
-                    df.loc[twd_indices, const.COL_TXN_TYPE] = '台幣跨境交易'
+                    df.loc[twd_indices, const.COL_TXN_TYPE] = const.TransactionType.FOREIGN_TWD.label
                     
                     mask_foreign_curr = ~mask_twd
-                    df.loc[same_indices[mask_foreign_curr], const.COL_TXN_TYPE] = '一般雙幣交易'
+                    df.loc[same_indices[mask_foreign_curr], const.COL_TXN_TYPE] = const.TransactionType.FOREIGN_DUAL.label
 
         return df
 
@@ -189,10 +189,10 @@ class TransactionClassifier:
         
         target_mask = mask_empty & mask_nonzero
         if target_mask.any():
-            df.loc[target_mask, const.COL_TXN_TYPE] = '交易'
+            df.loc[target_mask, const.COL_TXN_TYPE] = const.TransactionType.GENERAL.label
             
         target_zero = mask_empty & (~mask_nonzero)
         if target_zero.any():
-            df.loc[target_zero, const.COL_TXN_TYPE] = '驗證/零元'
+            df.loc[target_zero, const.COL_TXN_TYPE] = const.TransactionType.VERIFY.label
             
         return df

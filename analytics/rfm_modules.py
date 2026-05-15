@@ -53,7 +53,7 @@ def _calculate_multi_window_rfm(df_clean, group_cols, time_windows):
 
 def calculate_merchant_rfm(df_raw, windows_config):
     df_clean = _get_clean_df(df_raw)
-    final_df = _calculate_multi_window_rfm(df_clean, 'merchant_name', windows_config)
+    final_df = _calculate_multi_window_rfm(df_clean, 'merchant_display', windows_config)
     
     short_prefix = windows_config[-1]['prefix']
     

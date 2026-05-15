@@ -19,6 +19,7 @@ excel_files/
 ~$*.doc
 ~$*.pptx
 
+
 # 忽略資料檔 (保護隱私！)
 *.xlsx
 *.db
@@ -41,7 +42,7 @@ output/result_*.csv
 processors/*_set.py
 analytics/*_set.py
 web/*_private.html
-
+dim_ec_platform.csv
 
 # 忽略測試檔
 *_demo.py
@@ -70,3 +71,4 @@ spending_matrix_result.csv
 # 忽略 Python 產生的快取 (常見的垃圾)
 __pycache__/
 *.pyc
+MyCreditCardProjectPro.csproj.lscache

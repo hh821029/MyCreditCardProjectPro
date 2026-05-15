@@ -27,10 +27,12 @@ except ImportError:
 try:
     from loaders.sqlite_loader import SQLiteLoader
     from loaders.bills_to_db import BillsToDB
+    from loaders.schema_enforcer import SchemaEnforcer
 except ImportError:
     logging.warning("⚠️ 尚未建立 loaders.sqlite_loader 或 loaders.bills_to_db，將跳過資料庫載入步驟")
     SQLiteLoader = None
     BillsToDB = None
+    SchemaEnforcer = None
 
 # 5. [新加入] 引入配置載入器
 try:
@@ -158,6 +160,7 @@ def run_etl_pipeline():
                         'merchants': ConfigLoader.load_config(CONFIG_DIR, 'dim_merchants', strategy='append'),
                         'cards': ConfigLoader.load_config(CONFIG_DIR, 'dim_cards', strategy='replace'),
                         'gateways': ConfigLoader.load_config(CONFIG_DIR, 'dim_payment_process', strategy='append'),
+                        'ec_platforms': ConfigLoader.load_config(CONFIG_DIR, 'dim_ec_platform', strategy='append'),
                         'txn_types': ConfigLoader.load_yaml(CONFIG_DIR, 'transaction_types.yaml')
                     }
                     refiner = DataRefiner(config_dir=CONFIG_DIR, configs=configs)
@@ -182,6 +185,10 @@ def run_etl_pipeline():
         # --- STEP 4: Filter & Sort (最終整理) ---
         available_cols = [c for c in const.STANDARD_COLUMNS if c in final_df.columns]
         final_df = final_df[available_cols]
+
+        # [型別執法] 強制執行 Schema 規範 (解決 card_no .0 等問題)
+        if SchemaEnforcer:
+            final_df = SchemaEnforcer.enforce(final_df)
         
         if const.COL_TXN_DATE in final_df.columns:
             try:

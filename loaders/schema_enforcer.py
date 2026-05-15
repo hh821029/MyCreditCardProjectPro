@@ -8,59 +8,69 @@ logger = logging.getLogger(__name__)
 
 class SchemaEnforcer:
     """
-    [型別執法模組]
-    職責：根據 const.COLUMN_TYPES 強制規範 DataFrame 的資料型別。
-    解決：Pandas 自動型別偵測導致的 float64 vs str 衝突、NaN 轉字串、浮點數尾巴等問題。
+    [型別與長度執法模組]
+    職責：根據 const.TransactionColumn 的定義強制規範 DataFrame。
+    功能：
+    1. 強制型別轉換 (float, str, date, bool)
+    2. 長度限制 (自動截斷，特別處理卡號)
+    3. 異常格式修復 (如 .0 尾巴)
     """
 
     @staticmethod
     def enforce(df: pd.DataFrame) -> pd.DataFrame:
-        """
-        對傳入的 DataFrame 執行強制型別轉換
-        """
         if df is None or df.empty:
             return df
-            
+
         df_enforced = df.copy()
-        
-        for col_name, target_type in const.COLUMN_TYPES.items():
-            # 只處理 DataFrame 裡實際存在的欄位
+
+        # 遍歷 Enum 成員進行自動執法
+        for col_enum in const.TransactionColumn:
+            col_name = col_enum.col_name
+            target_type = col_enum.dtype
+            max_len = col_enum.max_length
+
             if col_name not in df_enforced.columns:
                 continue
 
-            # --- 1. 處理數值 (Float) ---
+            # --- 1. 型別轉換 ---
             if target_type == 'float':
-                # 如果是字串，先去逗號
                 if df_enforced[col_name].dtype == 'object':
                     df_enforced[col_name] = df_enforced[col_name].astype(str).str.replace(',', '', regex=False)
-                # 強制轉數值 (無法轉的變 NaN)
                 df_enforced[col_name] = pd.to_numeric(df_enforced[col_name], errors='coerce')
 
-            # --- 2. 處理字串 (String) ---
             elif target_type == 'str':
-                # 先轉為字串，此時 1234.0 會變成 "1234.0"
                 s = df_enforced[col_name].astype(str)
-                
-                # 修復浮點數格式 (只針對 "純數字.0" 進行修復，避免 1234 變成 "1234.0")
-                s = s.str.replace(r'^(\d+)\.0$', r'\1', regex=True)
-                
-                # 去除前後空白
+                # 1. 基礎清洗：移除 .0 (float 殘留)、前後空白、處理各種空值字串
+                s = s.str.replace(r'\.0$', '', regex=True)
                 s = s.str.strip()
-                
-                # 將 "nan", "None", "" 統一轉為真正的 None (object 型態下代表 NULL)
-                # 這樣在寫入資料庫或進行比較時最穩定
-                s = s.replace({'nan': None, 'None': None, '': None})
-                
+                s = s.replace({'nan': None, 'None': None, '': None, 'None.0': None})
+
+                # 2. 長度與特殊邏輯執法
+                if max_len:
+                    # 找出非空值的索引進行處理
+                    mask = s.notna()
+                    if mask.any():
+                        if col_enum in [const.TransactionColumn.CARD_NO, const.TransactionColumn.VPC_NO]:
+                            # [關鍵修正] 卡號/虛擬卡號：先補齊前導零(zfill)，再取末端 X 碼
+                            # 這樣 123 會先變 0123，確保 0 不會消失
+                            s.loc[mask] = s.loc[mask].str.zfill(max_len).str[-max_len:]
+                        else:
+                            # 一般字串：從前端截斷
+                            s.loc[mask] = s.loc[mask].str.slice(0, max_len)
+
                 df_enforced[col_name] = s
 
-            # --- 3. 處理日期 (Date) ---
             elif target_type == 'date':
-                # 確保轉換為 datetime64[ns]
                 if not pd.api.types.is_datetime64_any_dtype(df_enforced[col_name]):
-                    # 使用 format='mixed' 消除推論警告，並兼顧不同日期格式
                     df_enforced[col_name] = pd.to_datetime(df_enforced[col_name], format='mixed', errors='coerce')
 
+            elif target_type == 'bool':
+                # 強制轉為布林值
+                df_enforced[col_name] = df_enforced[col_name].map({'True': True, 'False': False, True: True, False: False, 1: True, 0: False, '1': True, '0': False})
+                df_enforced[col_name] = df_enforced[col_name].fillna(False).astype(bool)
+
         return df_enforced
+
 
     @staticmethod
     def list_inconsistent_columns(df: pd.DataFrame):

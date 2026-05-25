@@ -2,6 +2,7 @@ import pandas as pd
 import sqlite3
 import logging
 import os
+from typing import Optional, List, Literal
 
 logger = logging.getLogger(__name__)
 
@@ -22,7 +23,7 @@ class SQLiteLoader:
         if db_dir:
             os.makedirs(db_dir, exist_ok=True)
 
-    def load(self, df: pd.DataFrame, table_name: str, mode: str = 'replace', indices: list = None):
+    def load(self, df: pd.DataFrame, table_name: str, mode: Literal['append', 'delete_rows', 'fail', 'replace'] = 'replace', indices: Optional[List[str]] = None):
         """
         將 DataFrame 寫入 SQLite
         mode: 'replace' (全量覆蓋), 'append' (附加)
@@ -42,7 +43,11 @@ class SQLiteLoader:
             if any(key in col.lower() for key in ['date', 'month']):
                 try:
                     # 使用 format='mixed' 處理不同格式，errors='coerce' 將無法解析的轉為 NaT
-                    df_final[col] = pd.to_datetime(df_final[col], format='mixed', errors='coerce').dt.strftime('%Y-%m-%d')
+                    dt_series = pd.to_datetime(df_final[col], format='mixed', errors='coerce')
+                    if isinstance(dt_series, pd.Series):
+                        df_final[col] = dt_series.dt.strftime('%Y-%m-%d')
+                    else:
+                        df_final[col] = pd.Series(dt_series).dt.strftime('%Y-%m-%d')
                 except Exception as e:
                     logger.debug(f"跳過非日期欄位 {col}: {e}")
 

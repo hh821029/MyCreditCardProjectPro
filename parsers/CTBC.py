@@ -29,7 +29,11 @@ class CTBCParser(BaseCsvParser):
 
         df.columns = df.columns.astype(str).str.strip()
         available = [c for c in self.mapping.keys() if c in df.columns]
-        df = df[available].rename(columns=self.mapping)
+        df_sliced = df[available]
+        if isinstance(df_sliced, pd.DataFrame):
+            df = df_sliced.rename(columns=self.mapping)
+        else:
+            df = pd.DataFrame(df_sliced).rename(columns=self.mapping)
         df[const.COL_BANK_NAME] = self.bank.bank_id
 
         df[const.COL_PAY_AMOUNT] = self._clean_amount(df, const.COL_PAY_AMOUNT)

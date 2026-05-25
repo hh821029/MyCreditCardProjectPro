@@ -1,5 +1,6 @@
 import os
 import logging
+from typing import Optional, List
 import pandas as pd
 from loaders.config_loader import ConfigLoader
 from loaders.sqlite_loader import SQLiteLoader
@@ -27,7 +28,7 @@ class ConfigSyncManager:
         self.db_path = db_path
         self.loader = SQLiteLoader(self.db_path)
 
-    def _sync_item(self, name, csv_base, table_name, mapping_func, indices=None, strategy=None):
+    def _sync_item(self, name: str, csv_base: str, table_name: str, mapping_func, indices: Optional[List[str]] = None, strategy: str = 'append'):
         """通用同步邏輯"""
         try:
             logger.info(f"🔄 正在同步 {name}...")
@@ -44,7 +45,9 @@ class ConfigSyncManager:
             # 僅保留映射定義中的欄位
             cols_to_keep = [v for v in mapping.values() if v in df_mapped.columns]
             df_final = df_mapped[cols_to_keep]
-
+            if not isinstance(df_final, pd.DataFrame):
+                df_final = pd.DataFrame(df_final)
+ 
             # 寫入資料庫
             self.loader.load(df_final, table_name, mode='replace', indices=indices)
             logger.info(f"✅ {name} 同步完成 -> [{table_name}]")

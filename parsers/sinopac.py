@@ -43,19 +43,19 @@ class SinopacBillParser(BasePdfParser):
                                 if i > 0:
                                     prev_row = table[i-1]
                                     if not self._is_date_pattern(prev_row[0]) and len(prev_row) > 3:
-                                        part = str(prev_row[3] or '').strip()
+                                        part = f"{prev_row[3] or ''}".strip()
                                         if part: desc_parts.append(part)
 
                                 # B. 檢查當前行 (Meat)
                                 if len(row) > 3:
-                                    curr_part = str(row[3] or '').strip()
+                                    curr_part = f"{row[3] or ''}".strip()
                                     if curr_part: desc_parts.append(curr_part)
 
                                 # C. 檢查下一行 (Bottom Bun)
                                 if i < num_rows - 1:
                                     next_row = table[i+1]
                                     if not self._is_date_pattern(next_row[0]) and len(next_row) > 3:
-                                        part = str(next_row[3] or '').strip()
+                                        part = f"{next_row[3] or ''}".strip()
                                         if part: desc_parts.append(part)
                                 
                                 # 合併說明

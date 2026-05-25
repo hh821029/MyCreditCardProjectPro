@@ -3,6 +3,7 @@ import pandas as pd
 from datetime import timedelta
 from . import rfm_utils
 import numpy as np
+from typing import cast
 
 # 不再需要 Regex 和 Config 路徑，因為 DB 出來的資料已經是乾淨的了
 # 定義不列入 RFM 計算的交易類型 (防護網)
@@ -11,11 +12,12 @@ EXCLUDE_TYPES = ['繳款', '各項費用', '退刷', '紅利折抵']
 def _get_clean_df(df_raw: pd.DataFrame) -> pd.DataFrame:
     """過濾掉非消費類型的紀錄"""
     mask = ~df_raw['transaction_type'].isin(EXCLUDE_TYPES)
-    return df_raw[mask].copy()
+    return cast(pd.DataFrame, df_raw[mask].copy())
 
 def _calculate_multi_window_rfm(df_clean, group_cols, time_windows):
     """內部通用邏輯：多視窗迴圈計算 (Wide Table Loop)"""
-    if df_clean.empty: return pd.DataFrame()
+    if df_clean.empty or not time_windows: 
+        return pd.DataFrame()
     
     analysis_date = df_clean['transaction_date'].max() + timedelta(days=1)
     final_df = None
@@ -40,14 +42,20 @@ def _calculate_multi_window_rfm(df_clean, group_cols, time_windows):
             rfm_part_clean = rfm_part.drop(columns=cols_to_drop)
             final_df = final_df.join(rfm_part_clean, how='outer')
             
-    final_df = final_df.fillna(0)
-    
+    if final_df is None:
+        return pd.DataFrame()
+
+    # 根據不同欄位屬性進行精確的空值填充，避免型態警告與資料污染
+    fill_values = {}
     for col in final_df.columns:
-        if 'recency_days' in col:
-            prefix = col.replace('recency_days', '')
-            freq_col = f"{prefix}frequency"
-            if freq_col in final_df.columns:
-                final_df.loc[final_df[freq_col] == 0, col] = 9999
+        if col == 'category':
+            fill_values[col] = '未分類'
+        elif 'recency_days' in col:
+            fill_values[col] = 9999
+        else:
+            fill_values[col] = 0
+            
+    final_df = final_df.fillna(value=fill_values)
                 
     return final_df
 
@@ -148,11 +156,13 @@ def generate_spending_matrix(df_raw, time_windows=None):
         
         df_subset = df_clean[df_clean['transaction_date'] >= (latest_date - timedelta(days=days))] if days else df_clean
         if df_subset.empty: continue
-            
-        matrix = pd.pivot_table(
-            df_subset, values='payment_amount', 
-            index='category', columns='mobile_payment', 
-            aggfunc='sum', fill_value=0
+        df_subset_df = cast(pd.DataFrame, df_subset)
+        matrix = df_subset_df.pivot_table(
+            values='payment_amount', 
+            index='category', 
+            columns='mobile_payment', 
+            aggfunc=np.sum, 
+            fill_value=0
         )
         
         matrix_pct = (matrix.div(matrix.sum(axis=1), axis=0) * 100).fillna(0)

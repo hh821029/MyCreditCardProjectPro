@@ -40,7 +40,11 @@ class HNCBParser(BaseHtmlParser):
         # 2. 映射
         # 欄位名稱已經在 read_html_smart 清洗過去除空白了，直接對應即可
         available = [c for c in self.mapping.keys() if c in df.columns]
-        df = df[available].rename(columns=self.mapping)
+        df_sliced = df[available]
+        if isinstance(df_sliced, pd.DataFrame):
+            df = df_sliced.rename(columns=self.mapping)
+        else:
+            df = pd.DataFrame(df_sliced).rename(columns=self.mapping)
         df[const.COL_BANK_NAME] = self.bank.bank_id
 
         # 3. 卡號提取邏輯 (_extract_card_info)

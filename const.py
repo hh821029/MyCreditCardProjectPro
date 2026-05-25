@@ -114,9 +114,12 @@ class TransactionColumn(Enum):
                 tgt_name = tgt.sql_name if isinstance(tgt, cls) else tgt
                 if tgt_name is not None:
                     mapping[src_name] = tgt_name
-            else:
+            elif isinstance(item, cls):
                 if item.sql_name is not None:
                     mapping[item.col_name] = item.sql_name
+            else:
+                # 攔截預期外的輸入型態（防呆機制）
+                raise TypeError(f"不支援的傳入參數型態: {type(item)}")
         return mapping
 
 class TransactionType(Enum):
@@ -177,7 +180,7 @@ class Location(Enum):
         return None
 
     @classmethod
-    def normalize(cls, code: str) -> str:
+    def normalize(cls, code):
         """標準化輸出：將任意格式國別轉為兩碼。若無法識別或為空則回傳原值。"""
         if pd.isna(code) or str(code).strip() == '' or str(code).upper() == 'NONE':
             return code
@@ -221,7 +224,7 @@ class Currency(Enum):
         return None
 
     @classmethod
-    def normalize(cls, value: str) -> str:
+    def normalize(cls, value):
         """標準化輸出：將各種幣別寫法轉為標準三碼。若無法識別或為空則回傳原值。"""
         if pd.isna(value) or str(value).strip() == '' or str(value).upper() == 'NONE':
             return value

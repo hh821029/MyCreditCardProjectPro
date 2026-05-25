@@ -68,17 +68,17 @@ class BaseBillParser:
     def _get_bill_period(self, filepath: str):
         filename = os.path.basename(filepath)
         patterns = [
-            {'pat': r'(\d{2,3})年(\d{1,2})月', 'is_roc': True},
-            {'pat': r'(20\d{2})(\d{2})', 'is_roc': False},
-            {'pat': r'(\d{3})(\d{2})', 'is_roc': True}
+            (r'(\d{2,3})年(\d{1,2})月', True),
+            (r'(20\d{2})(\d{2})', False),
+            (r'(\d{3})(\d{2})', True)
         ]
-        for p in patterns:
-            match = re.search(p['pat'], filename)
+        for pat, is_roc in patterns:
+            match = re.search(pat, filename)
             if match:
                 y_str, m_str = match.group(1), match.group(2)
                 year = int(y_str)
                 month = int(m_str)
-                if p['is_roc']: year += 1911
+                if is_roc: year += 1911
                 return year, month
         return None, None
 
@@ -174,6 +174,9 @@ class BaseBillParser:
         card_no_pattern = config.get('card_no')
         card_type_pattern = config.get('card_type')
 
+        if not isinstance(trigger, str) or not isinstance(card_no_pattern, str):
+            return df
+
         # 1. 標記 Master Rows (包含卡號資訊的標題列)
         # 使用 na=False 避免非字串資料報錯
         mask_master = df[const.COL_MERCHANT].astype(str).str.contains(trigger, na=False, regex=True)
@@ -191,7 +194,7 @@ class BaseBillParser:
             # 從暫存欄位中，用 Regex 抓出卡號與卡別
             df[const.COL_CARD_NO] = df['raw_master_info'].str.extract(card_no_pattern)
             
-            if card_type_pattern:
+            if isinstance(card_type_pattern, str):
                 df[const.COL_CARD_TYPE] = df['raw_master_info'].str.extract(card_type_pattern)
 
             # 4. [Fix Issue] 繳款/轉帳資料防呆
@@ -205,7 +208,9 @@ class BaseBillParser:
 
             # 5. 清理戰場
             # 刪除原始的 Master Rows (它們不是交易)
-            df = df[~mask_master].copy()
+            filtered_df = df.loc[~mask_master].copy()
+            if isinstance(filtered_df, pd.DataFrame):
+                df = filtered_df
             # 刪除暫存欄位
             df = df.drop(columns=['raw_master_info'])
 
@@ -223,11 +228,14 @@ class BaseBillParser:
         series = series.str.replace(',', '', regex=False)
         
         # 3. 轉為數字 (無法轉換的變成 NaN，然後填 0)
-        return pd.to_numeric(series, errors='coerce').fillna(0)
+        numeric_series = pd.to_numeric(series, errors='coerce')
+        if not isinstance(numeric_series, pd.Series):
+            numeric_series = pd.Series(numeric_series, index=df.index)
+        return numeric_series.fillna(0)
 
 class BaseCsvParser(BaseBillParser):
     """[CSV 專用基底]"""
-    def read_csv_smart(self, filepath: str, encoding: str, header_keyword: str, stop_at_keyword: str = None) -> pd.DataFrame:
+    def read_csv_smart(self, filepath: str, encoding: str, header_keyword: str, stop_at_keyword: Optional[str] = None) -> pd.DataFrame:
         content_buffer = []
         found_header = False
         try:
@@ -252,7 +260,7 @@ class BaseCsvParser(BaseBillParser):
         
 class BaseHtmlParser(BaseBillParser):
     """[HTML/XLS 專用基底]"""
-    def read_html_smart(self, filepath: str, encoding: str, header_keyword: str, stop_at_keyword: str = None) -> pd.DataFrame:
+    def read_html_smart(self, filepath: str, encoding: str, header_keyword: str, stop_at_keyword: Optional[str] = None) -> pd.DataFrame:
         try:
             with open(filepath, 'r', encoding=encoding, errors='replace') as f:
                 soup = BeautifulSoup(f, 'lxml')
@@ -263,10 +271,13 @@ class BaseHtmlParser(BaseBillParser):
             dfs = pd.read_html(io.StringIO(str(target_table)), header=0)
             if not dfs: return pd.DataFrame()
             df = dfs[0]
-            df.columns = ["".join(str(c).split()) for c in df.columns]
+            df.columns = ["".join(f"{c}".split()) for c in df.columns]
             if stop_at_keyword:
                 mask = df.astype(str).apply(lambda x: x.str.contains(stop_at_keyword, na=False)).any(axis=1)
-                if mask.any(): df = df.iloc[:mask.idxmax()]
+                if mask.any():
+                    sliced_df = df.iloc[:mask.idxmax()]
+                    if isinstance(sliced_df, pd.DataFrame):
+                        df = sliced_df
             return df
         except Exception as e:
             logger.error(f"❌ Smart HTML Read 失敗 ({os.path.basename(filepath)}): {e}")

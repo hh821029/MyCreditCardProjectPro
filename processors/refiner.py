@@ -2,6 +2,7 @@
 import pandas as pd
 import logging
 import const
+from typing import Optional
 from .mapper import CardMapper
 from .merchant import MerchantNormalizer, PaymentProcessTagger, ECPlatformTagger
 from .classifier import TransactionClassifier
@@ -9,7 +10,7 @@ from .classifier import TransactionClassifier
 logger = logging.getLogger(__name__)
 
 class DataRefiner:
-    def __init__(self, config_dir: str, configs: dict = None):
+    def __init__(self, config_dir: str, configs: Optional[dict] = None):
         configs = configs or {}
         self.mapper = CardMapper(config_dir, rules=configs.get('cards'))
         self.ec_tagger = ECPlatformTagger(config_dir, rules=configs.get('ec_platforms'))
@@ -38,7 +39,12 @@ class DataRefiner:
 
         # 4. 商家正規化 (Merchant Normalization)
         #    依據 merchants.csv 替換商家名稱，結果存入 Merchant_Display
-        df, processed_mask = self.merchant_normalizer.process(df, return_mask=True)
+        res = self.merchant_normalizer.process(df, return_mask=True)
+        if isinstance(res, tuple):
+            df, processed_mask = res
+        else:
+            df = res
+            processed_mask = pd.Series(False, index=df.index)
 
         # 4.5 [新增] Fallback 洗滌 (階層式補位)
         #     若沒被 dim_merchants 正規化處理，且有電商平台標籤，則將商家顯示名稱簡化為電商平台

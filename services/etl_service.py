@@ -115,6 +115,7 @@ def run_etl_pipeline():
     logger.info("🚀 ETL 流程啟動...")
     
     all_raw_dfs: List[pd.DataFrame] = []
+    merged_df: Optional[pd.DataFrame] = None
     
     # --- STEP 1: Extract (讀取與解析) ---
     try:
@@ -173,6 +174,8 @@ def run_etl_pipeline():
                 # 假設 Transaction_Type 為 '未分類' 或是卡片映射失敗
                 if 'transaction_type' in final_df.columns:
                     anomalies = final_df[final_df['transaction_type'].isin(['未分類', 'Unknown', '', None])]
+                    if not isinstance(anomalies, pd.DataFrame):
+                        anomalies = pd.DataFrame(anomalies)
                     if not anomalies.empty:
                         save_anomaly_report(anomalies, 'anomaly_uncategorized.csv', f"發現 {len(anomalies)} 筆未分類交易")
 
@@ -184,8 +187,12 @@ def run_etl_pipeline():
         
         # --- STEP 4: Filter & Sort (最終整理) ---
         available_cols = [c for c in const.STANDARD_COLUMNS if c in final_df.columns]
-        final_df = final_df[available_cols]
-
+        sliced_df = final_df[available_cols]
+        if isinstance(sliced_df, pd.DataFrame):
+            final_df = sliced_df
+        else:
+            final_df = pd.DataFrame(sliced_df)
+ 
         # [型別執法] 強制執行 Schema 規範 (解決 card_no .0 等問題)
         if SchemaEnforcer:
             final_df = SchemaEnforcer.enforce(final_df)
@@ -222,5 +229,5 @@ def run_etl_pipeline():
     except Exception as e:
         logger.error(f"🚨 ETL 流程發生未預期嚴重錯誤: {e}")
         # 全域崩潰時，嘗試拯救已合併的資料
-        if 'merged_df' in locals():
+        if merged_df is not None:
             save_anomaly_report(merged_df, 'crash_dump_global.csv', "全域流程崩潰，已嘗試救援資料")

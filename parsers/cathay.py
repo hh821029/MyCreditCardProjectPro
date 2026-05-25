@@ -32,7 +32,11 @@ class CubeParser(BaseCsvParser):
         clean_headers = df.columns.astype(str).str.replace(' ', '').str.replace('\t', '')
         df.columns = clean_headers
         available = [c for c in self.mapping.keys() if c in df.columns]
-        df = df[available].rename(columns=self.mapping)
+        df_sliced = df[available]
+        if isinstance(df_sliced, pd.DataFrame):
+            df = df_sliced.rename(columns=self.mapping)
+        else:
+            df = pd.DataFrame(df_sliced).rename(columns=self.mapping)
         df[const.COL_BANK_NAME] = self.bank.bank_id
 
         # 3. 清洗國泰專屬的「偽空值」符號

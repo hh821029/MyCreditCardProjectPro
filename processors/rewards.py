@@ -37,7 +37,7 @@ class RewardsCalculator:
     - 多張活動可堆疊在 Base 之上 (Campaign stacking)
     """
 
-    def __init__(self, configs: Dict[str, pd.DataFrame] = None):
+    def __init__(self, configs: Optional[Dict[str, pd.DataFrame]] = None):
         self.configs = configs or {}
         
         # Phase 1: Base Rules (Waterfall with Break scope to Base layer)
@@ -235,18 +235,32 @@ class RewardsCalculator:
             if not base_rules.empty:
                 # 整合日期 (交集)
                 if 'start_date_rule' in base_rules.columns and 'start_date_base' in base_rules.columns:
-                    base_rules['start_date'] = base_rules[['start_date_rule', 'start_date_base']].max(axis=1, skipna=True)
+                    base_rules['start_date'] = pd.DataFrame({
+                        'rule': base_rules['start_date_rule'],
+                        'base': base_rules['start_date_base']
+                    }).max(axis=1, skipna=True)
                 if 'end_date_rule' in base_rules.columns and 'end_date_base' in base_rules.columns:
-                    base_rules['end_date'] = base_rules[['end_date_rule', 'end_date_base']].min(axis=1, skipna=True)
+                    base_rules['end_date'] = pd.DataFrame({
+                        'rule': base_rules['end_date_rule'],
+                        'base': base_rules['end_date_base']
+                    }).min(axis=1, skipna=True)
                 
                 # 排序 (priority 越小越高)
                 if 'priority' in base_rules.columns:
-                    base_rules['priority'] = pd.to_numeric(base_rules['priority'], errors='coerce').fillna(999)
+                    base_rules_priority = pd.to_numeric(base_rules['priority'], errors='coerce')
+                    if isinstance(base_rules_priority, pd.Series):
+                        base_rules['priority'] = base_rules_priority.fillna(999)
+                    else:
+                        base_rules['priority'] = 999 if pd.isna(base_rules_priority) else base_rules_priority
                     base_rules = base_rules.sort_values(by='priority', ascending=True)
                 
                 # 確保 merchant_rate 為百分比
                 if 'merchant_rate' in base_rules.columns:
-                    base_rules['merchant_rate'] = pd.to_numeric(base_rules['merchant_rate'], errors='coerce').fillna(0) / 100.0
+                    base_rules_rate = pd.to_numeric(base_rules['merchant_rate'], errors='coerce')
+                    if isinstance(base_rules_rate, pd.Series):
+                        base_rules['merchant_rate'] = base_rules_rate.fillna(0) / 100.0
+                    else:
+                        base_rules['merchant_rate'] = (0.0 if pd.isna(base_rules_rate) else base_rules_rate) / 100.0
                 
                 base_rules = self._apply_dynamic_date_intersection(base_rules, 'base_reward_program')
                 self.base_rules_master = base_rules
@@ -272,18 +286,32 @@ class RewardsCalculator:
             if not camp_rules.empty:
                 # 整合日期
                 if 'start_date_rule' in camp_rules.columns and 'start_date_camp' in camp_rules.columns:
-                    camp_rules['start_date'] = camp_rules[['start_date_rule', 'start_date_camp']].max(axis=1, skipna=True)
+                    camp_rules['start_date'] = pd.DataFrame({
+                        'rule': camp_rules['start_date_rule'],
+                        'camp': camp_rules['start_date_camp']
+                    }).max(axis=1, skipna=True)
                 if 'end_date_rule' in camp_rules.columns and 'end_date_camp' in camp_rules.columns:
-                    camp_rules['end_date'] = camp_rules[['end_date_rule', 'end_date_camp']].min(axis=1, skipna=True)
+                    camp_rules['end_date'] = pd.DataFrame({
+                        'rule': camp_rules['end_date_rule'],
+                        'camp': camp_rules['end_date_camp']
+                    }).min(axis=1, skipna=True)
                 
                 # 排序
                 if 'priority' in camp_rules.columns:
-                    camp_rules['priority'] = pd.to_numeric(camp_rules['priority'], errors='coerce').fillna(999)
+                    camp_rules_priority = pd.to_numeric(camp_rules['priority'], errors='coerce')
+                    if isinstance(camp_rules_priority, pd.Series):
+                        camp_rules['priority'] = camp_rules_priority.fillna(999)
+                    else:
+                        camp_rules['priority'] = 999 if pd.isna(camp_rules_priority) else camp_rules_priority
                     camp_rules = camp_rules.sort_values(by='priority', ascending=True)
                 
                 # 確保 merchant_rate 為百分比
                 if 'merchant_rate' in camp_rules.columns:
-                    camp_rules['merchant_rate'] = pd.to_numeric(camp_rules['merchant_rate'], errors='coerce').fillna(0) / 100.0
+                    camp_rules_rate = pd.to_numeric(camp_rules['merchant_rate'], errors='coerce')
+                    if isinstance(camp_rules_rate, pd.Series):
+                        camp_rules['merchant_rate'] = camp_rules_rate.fillna(0) / 100.0
+                    else:
+                        camp_rules['merchant_rate'] = (0.0 if pd.isna(camp_rules_rate) else camp_rules_rate) / 100.0
                 
                 camp_rules = self._apply_dynamic_date_intersection(camp_rules, 'campaign_reward_program')
                 self.campaign_rules_master = camp_rules
@@ -552,7 +580,11 @@ class RewardsCalculator:
         
         # 日期標準化
         df[const.COL_TXN_DATE] = pd.to_datetime(df[const.COL_TXN_DATE], errors='coerce')
-        df[const.COL_PAY_AMOUNT] = pd.to_numeric(df[const.COL_PAY_AMOUNT], errors='coerce').fillna(0)
+        pay_amounts = pd.to_numeric(df[const.COL_PAY_AMOUNT], errors='coerce')
+        if isinstance(pay_amounts, pd.Series):
+            df[const.COL_PAY_AMOUNT] = pay_amounts.fillna(0)
+        else:
+            df[const.COL_PAY_AMOUNT] = 0.0 if pd.isna(pay_amounts) else pay_amounts
         
         # === 預初始化所有回饋欄位 ===
         df['matched_base_rule'] = ''
@@ -571,6 +603,9 @@ class RewardsCalculator:
         for _, rule in self.all_rules_master.iterrows():
             # 找出尚未被 Break 的交易
             pending_mask = ~df['_rule_applied']
+            if not isinstance(pending_mask, pd.Series):
+                continue
+                
             if not pending_mask.any():
                 break
             
@@ -597,9 +632,11 @@ class RewardsCalculator:
                     df.loc[empty_base_mask, 'base_rule_rate'] = f"{rate*100:.0f}%"
             elif rule.get('is_campaign_rule'):
                 # 追踪 Campaign（支援堆疊）
-                df.loc[matched_mask, '_campaign_details'] = df.loc[matched_mask, '_campaign_details'].apply(
-                    lambda x: x + [f"{rule.get('rules_reward_program')}({rate*100:.0f}%)"] if isinstance(x, list) else [f"{rule.get('rules_reward_program')}({rate*100:.0f}%)"]
-                )
+                details_series = df.loc[matched_mask, '_campaign_details']
+                if isinstance(details_series, pd.Series):
+                    df.loc[matched_mask, '_campaign_details'] = details_series.apply(
+                        lambda x: x + [f"{rule.get('rules_reward_program')}({rate*100:.0f}%)"] if isinstance(x, list) else [f"{rule.get('rules_reward_program')}({rate*100:.0f}%)"]
+                    )
             
             # Break 邏輯（全局範圍）
             if str(rule.get('reward_cal_break')).upper() == 'TRUE':
@@ -615,11 +652,15 @@ class RewardsCalculator:
         
 
         # 合併 Campaign 詳情
-        df['matched_campaigns'] = df['_campaign_details'].apply(lambda x: '|'.join(x) if isinstance(x, list) and x else '')
+        campaign_details = df['_campaign_details']
+        if isinstance(campaign_details, pd.Series):
+            df['matched_campaigns'] = campaign_details.apply(lambda x: '|'.join(x) if isinstance(x, list) and x else '')
+        else:
+            df['matched_campaigns'] = ''
         
         # === Phase 4: 整合結果 ===
         df['is_bypassed'] = (df['matched_base_rule'] == '') & (df['matched_campaigns'] == '')
-        df['applied_rule'] = df['matched_base_rule'].fillna('') + ' | ' + df['matched_campaigns'].fillna('')
+        df['applied_rule'] = df['matched_base_rule'] + ' | ' + df['matched_campaigns']
         
         # 生成詳細除錯表
         self._export_debug_details(df)
@@ -631,7 +672,7 @@ class RewardsCalculator:
         
         return df
 
-    def _export_debug_details(self, df: pd.DataFrame, output_dir: str = None) -> None:
+    def _export_debug_details(self, df: pd.DataFrame, output_dir: Optional[str] = None) -> None:
         """
         生成詳細除錯輸出表
         

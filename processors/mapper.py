@@ -4,11 +4,12 @@ import os
 import logging
 import const
 import re
+from typing import Optional
 
 logger = logging.getLogger(__name__)
 
 class CardMapper:
-    def __init__(self, config_dir: str, rules: pd.DataFrame = None):
+    def __init__(self, config_dir: str, rules: Optional[pd.DataFrame] = None):
         if rules is not None and not rules.empty:
             self.rules = self._preprocess_rules(rules)
             logger.info(f"✅ CardMapper 已由外部載入 {len(self.rules)} 條規則")

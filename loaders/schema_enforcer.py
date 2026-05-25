@@ -50,13 +50,15 @@ class SchemaEnforcer:
                     # 找出非空值的索引進行處理
                     mask = s.notna()
                     if mask.any():
-                        if col_enum in [const.TransactionColumn.CARD_NO, const.TransactionColumn.VPC_NO]:
-                            # [關鍵修正] 卡號/虛擬卡號：先補齊前導零(zfill)，再取末端 X 碼
-                            # 這樣 123 會先變 0123，確保 0 不會消失
-                            s.loc[mask] = s.loc[mask].str.zfill(max_len).str[-max_len:]
-                        else:
-                            # 一般字串：從前端截斷
-                            s.loc[mask] = s.loc[mask].str.slice(0, max_len)
+                        s_loc = s.loc[mask]
+                        if isinstance(s_loc, pd.Series):
+                            if col_enum in [const.TransactionColumn.CARD_NO, const.TransactionColumn.VPC_NO]:
+                                # [關鍵修正] 卡號/虛擬卡號：先補齊前導零(zfill)，再取末端 X 碼
+                                # 這樣 123 會先變 0123，確保 0 不會消失
+                                s.loc[mask] = s_loc.str.zfill(max_len).str[-max_len:]
+                            else:
+                                # 一般字串：從前端截斷
+                                s.loc[mask] = s_loc.str.slice(0, max_len)
 
                 df_enforced[col_name] = s
 

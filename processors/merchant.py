@@ -4,12 +4,13 @@ import logging
 import re
 import const
 import warnings
+from typing import Optional, Union, Tuple
 
 warnings.filterwarnings("ignore", "This pattern is interpreted as a regular expression, and has match groups")
 logger = logging.getLogger(__name__)
 
 class MerchantNormalizer:
-    def __init__(self, config_dir: str, rules: pd.DataFrame = None):
+    def __init__(self, config_dir: str, rules: Optional[pd.DataFrame] = None):
         """
         商戶名稱正規化處理器
         :param rules: 由外部注入的規則 DataFrame (包含 pattern, merchant/merchant_display, category, priority)
@@ -18,11 +19,14 @@ class MerchantNormalizer:
         self.rules = rules if rules is not None else pd.DataFrame()
         # 根據 priority 排序 (1 為最高優先級)
         if not self.rules.empty and 'priority' in self.rules.columns:
-            # 確保 priority 是數值型別
-            self.rules['priority'] = pd.to_numeric(self.rules['priority'], errors='coerce').fillna(999)
+            priority_series = pd.to_numeric(self.rules['priority'], errors='coerce')
+            if isinstance(priority_series, pd.Series):
+                self.rules['priority'] = priority_series.fillna(999)
+            else:
+                self.rules['priority'] = 999 if pd.isna(priority_series) else priority_series
             self.rules = self.rules.sort_values('priority', ascending=True)
 
-    def process(self, df: pd.DataFrame, return_mask: bool = False) -> pd.DataFrame:
+    def process(self, df: pd.DataFrame, return_mask: bool = False) -> Union[pd.DataFrame, Tuple[pd.DataFrame, pd.Series]]:
         if self.rules.empty or df.empty: 
             return (df, pd.Series(False, index=df.index)) if return_mask else df
 
@@ -43,7 +47,7 @@ class MerchantNormalizer:
             replacement = rule.get('merchant_display') or rule.get('merchant')
             category = rule.get('category')
             
-            if pd.isna(pattern) or pattern == '': continue
+            if not isinstance(pattern, str) or pattern == '': continue
 
             try:
                 # 執行正則匹配
@@ -75,13 +79,17 @@ class PaymentProcessTagger:
     """
     負責標記支付管道或處理方式 (如 LinePay, 街口, 自動扣款)
     """
-    def __init__(self, config_dir: str, rules: pd.DataFrame = None):
+    def __init__(self, config_dir: str, rules: Optional[pd.DataFrame] = None):
         """
         :param rules: 由外部注入的規則 DataFrame (包含 payment_process_pattern, process_prefix, payment_process)
         """
         self.rules = rules if rules is not None else pd.DataFrame()
         if not self.rules.empty and 'priority' in self.rules.columns:
-            self.rules['priority'] = pd.to_numeric(self.rules['priority'], errors='coerce').fillna(999)
+            priority_series = pd.to_numeric(self.rules['priority'], errors='coerce')
+            if isinstance(priority_series, pd.Series):
+                self.rules['priority'] = priority_series.fillna(999)
+            else:
+                self.rules['priority'] = 999 if pd.isna(priority_series) else priority_series
             self.rules = self.rules.sort_values('priority', ascending=True)
 
     def process(self, df: pd.DataFrame) -> pd.DataFrame:
@@ -106,7 +114,7 @@ class PaymentProcessTagger:
             prefix = rule.get(const.COL_PROCESS_PREFIX) or rule.get('process_prefix')
             process_name = rule.get(const.COL_PAYMENT_PROCESS) or rule.get('payment_process')
             
-            if pd.isna(pattern) or pattern == '': continue
+            if not isinstance(pattern, str) or pattern == '': continue
             
             try:
                 mask = merchants.str.contains(pattern, case=False, regex=True, na=False)
@@ -144,13 +152,17 @@ class ECPlatformTagger:
     """
     負責標記電商平台 (如 MOMO, 蝦皮, STEAM)
     """
-    def __init__(self, config_dir: str, rules: pd.DataFrame = None):
+    def __init__(self, config_dir: str, rules: Optional[pd.DataFrame] = None):
         """
         :param rules: 由外部注入的規則 DataFrame (包含 ec_platform_pattern, ec_platform, priority)
         """
         self.rules = rules if rules is not None else pd.DataFrame()
         if not self.rules.empty and 'priority' in self.rules.columns:
-            self.rules['priority'] = pd.to_numeric(self.rules['priority'], errors='coerce').fillna(999)
+            priority_series = pd.to_numeric(self.rules['priority'], errors='coerce')
+            if isinstance(priority_series, pd.Series):
+                self.rules['priority'] = priority_series.fillna(999)
+            else:
+                self.rules['priority'] = 999 if pd.isna(priority_series) else priority_series
             self.rules = self.rules.sort_values('priority', ascending=True)
 
     def process(self, df: pd.DataFrame) -> pd.DataFrame:
@@ -167,7 +179,7 @@ class ECPlatformTagger:
             pattern = rule.get('ec_platform_pattern')
             platform_name = rule.get('ec_platform')
             
-            if pd.isna(pattern) or pattern == '': continue
+            if not isinstance(pattern, str) or pattern == '': continue
             
             try:
                 mask = merchants.str.contains(pattern, case=False, regex=True, na=False)

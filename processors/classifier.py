@@ -4,6 +4,7 @@ import os
 import logging
 import yaml
 import const
+from typing import Optional
 
 logger = logging.getLogger(__name__)
 
@@ -12,7 +13,7 @@ class TransactionClassifier:
     [交易分類器]
     負責根據傳入的配置規則，對交易進行分類。
     """
-    def __init__(self, config_dir: str, config: dict = None):
+    def __init__(self, config_dir: str, config: Optional[dict] = None):
         """
         :param config: 由外部注入的配置字典 (來自 transaction_types.yaml)
         """
@@ -181,18 +182,10 @@ class TransactionClassifier:
         return df
 
     def _mark_general(self, df: pd.DataFrame) -> pd.DataFrame:
-        """6. 剩下的標記為一般交易或驗證/零元"""
+        """6. 剩下的標記為一般交易"""
         mask_empty = self._get_mask_empty_type(df)
         
-        numeric_amounts = pd.to_numeric(df[const.COL_PAY_AMOUNT], errors='coerce').fillna(0)
-        mask_nonzero = numeric_amounts != 0
-        
-        target_mask = mask_empty & mask_nonzero
-        if target_mask.any():
-            df.loc[target_mask, const.COL_TXN_TYPE] = const.TransactionType.GENERAL.label
-            
-        target_zero = mask_empty & (~mask_nonzero)
-        if target_zero.any():
-            df.loc[target_zero, const.COL_TXN_TYPE] = const.TransactionType.VERIFY.label
+        if mask_empty.any():
+            df.loc[mask_empty, const.COL_TXN_TYPE] = const.TransactionType.GENERAL.label
             
         return df

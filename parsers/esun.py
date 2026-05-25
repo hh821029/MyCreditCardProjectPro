@@ -41,7 +41,11 @@ class EsunParser(BaseCsvParser):
         # 先做一次簡單的 strip 避免欄位名對不上
         df.columns = df.columns.astype(str).str.strip()
         available = [c for c in self.mapping.keys() if c in df.columns]
-        df = df[available].rename(columns=self.mapping)
+        df_sliced = df[available]
+        if isinstance(df_sliced, pd.DataFrame):
+            df = df_sliced.rename(columns=self.mapping)
+        else:
+            df = pd.DataFrame(df_sliced).rename(columns=self.mapping)
         df[const.COL_BANK_NAME] = self.bank.bank_id
 
         # 3. [新增] 全域空白清洗 (White Space Cleanup)
@@ -138,14 +142,15 @@ class EsunParser(BaseCsvParser):
             
             # 6. 回填
             # 找出有成功抓到金額的索引
-            valid_idx = amounts.notna()
-            target_index = df.loc[mask].loc[valid_idx].index
-            
-            # 填入負數
-            df.loc[target_index, const.COL_PAY_AMOUNT] = -amounts.loc[valid_idx]
-            
-            # 標記交易類別 (選用)
-            if const.COL_TXN_TYPE in df.columns:
-                df.loc[target_index, const.COL_TXN_TYPE] = '紅利折抵'
+            if isinstance(amounts, pd.Series):
+                valid_idx = amounts.notna()
+                target_index = df.loc[mask].loc[valid_idx].index
+                
+                # 填入負數
+                df.loc[target_index, const.COL_PAY_AMOUNT] = -amounts.loc[valid_idx]
+                
+                # 標記交易類別 (選用)
+                if const.COL_TXN_TYPE in df.columns:
+                    df.loc[target_index, const.COL_TXN_TYPE] = '紅利折抵'
 
         return df

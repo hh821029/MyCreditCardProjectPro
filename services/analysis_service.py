@@ -52,19 +52,25 @@ def clean_merchant_prefix(df: pd.DataFrame, config_dir: str) -> pd.DataFrame:
     try:
         process_df = pd.read_csv(process_file)
         # 過濾空值並去除頭尾空白 (對應新欄位 process_prefix)
-        prefixes = process_df.get('process_prefix', pd.Series(dtype=str)).dropna().astype(str).str.strip()
+        prefixes = pd.Series(dtype=str)
+        if 'process_prefix' in process_df.columns:
+            series_val = process_df['process_prefix']
+            if isinstance(series_val, pd.Series):
+                prefixes = series_val.dropna().astype(str).str.strip()
+        
         prefixes = prefixes[prefixes != '']
         
-        if prefixes.empty:
-            return df
+        if isinstance(prefixes, pd.Series):
+            if prefixes.empty:
+                return df
+                
+            # 組裝 Regex (使用 re.escape 保護特殊字元)
+            escaped_prefixes = [re.escape(str(p)) for p in prefixes]
+            pattern = r'^(' + r'|'.join(escaped_prefixes) + r')'
             
-        # 組裝 Regex (使用 re.escape 保護特殊字元)
-        escaped_prefixes = [re.escape(p) for p in prefixes]
-        pattern = r'^(' + r'|'.join(escaped_prefixes) + r')'
-        
-        # 執行 Regex 替換並去除可能留下的空白
-        df['merchant_display'] = df['merchant_display'].str.replace(pattern, '', regex=True).str.strip()
-        logger.info("🧹 已成功拔除 merchant_display 中的支付/處理前綴詞。")
+            # 執行 Regex 替換並去除可能留下的空白
+            df['merchant_display'] = df['merchant_display'].str.replace(pattern, '', regex=True).str.strip()
+            logger.info("🧹 已成功拔除 merchant_display 中的支付/處理前綴詞。")
         
     except Exception as e:
         logger.error(f"❌ 拔除商家前綴詞失敗: {e}", exc_info=True)
@@ -98,7 +104,11 @@ def run_analytics():
 
     # 基礎型態轉換
     df_raw['transaction_date'] = pd.to_datetime(df_raw['transaction_date'])
-    df_raw['payment_amount'] = pd.to_numeric(df_raw['payment_amount'], errors='coerce').fillna(0)
+    amount_series = pd.to_numeric(df_raw['payment_amount'], errors='coerce')
+    if isinstance(amount_series, pd.Series):
+        df_raw['payment_amount'] = amount_series.fillna(0)
+    else:
+        df_raw['payment_amount'] = pd.Series(amount_series).fillna(0)
     
     # [關鍵安插點]：在進行 Category Mapping 之前，先還原乾淨的商家名稱
     df_raw = clean_merchant_prefix(df_raw, CONFIG_DIR)

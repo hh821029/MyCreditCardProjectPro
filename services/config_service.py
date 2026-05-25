@@ -14,6 +14,9 @@ def run_config_reward_sync():
     sync_manager.sync_reward_base()
     sync_manager.sync_reward_campaigns()
     sync_manager.sync_reward_rules()
+    sync_manager.sync_bridge_cube_selections()
+    sync_manager.sync_bridge_unicard_selections()
+    sync_manager.sync_bridge_uniopen_visit_spots()
 
 def run_config_merchant_sync():
     """特約商店資料同步服務"""

@@ -84,6 +84,8 @@ class TransactionColumn(Enum):
 
     # 其他資訊(像是分期資訊等)
     INS_PLN = ('installment_plan', 'str', 100, 'installment_plan')
+    REMARK = ('remark', 'str', 1000, 'remark')
+    FX_RATE = ('exchange_rate', 'float', None, 'exchange_rate')
  
     # 暫存/運算用欄位 (Virtual Columns，不寫入資料庫)
     # 將 sql_name 設為 None，讓 mapping 自動攔截

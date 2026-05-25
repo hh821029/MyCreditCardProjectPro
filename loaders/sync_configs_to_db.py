@@ -11,7 +11,11 @@ from configs.db_columns_mapping import (
     MERCHANT_COL_MAPPING,
     PAYMENT_PROCESS_COL_MAPPING,
     EC_PLATFORM_COL_MAPPING,
-    REWARD_RULE_COL_MAPPING
+    REWARD_RULE_COL_MAPPING,
+    BRIDGE_CUBE_SELECTION_COL_MAPPING,
+    BRIDGE_UNICARD_SELECTION_COL_MAPPING,
+    BRIDGE_UNIOPEN_VISIT_SPOTS_COL_MAPPING,
+    FX_TABLE_COL_MAPPING
 )
 
 logger = logging.getLogger(__name__)
@@ -126,6 +130,46 @@ class ConfigSyncManager:
             strategy='append'
         )
 
+    def sync_bridge_cube_selections(self):
+        self._sync_item(
+            "國泰Cube權益切換歷史", 
+            "bridge_cube_selections", 
+            "bridge_cube_selections", 
+            BRIDGE_CUBE_SELECTION_COL_MAPPING, 
+            indices=['base_reward_program', 'start_date', 'end_date'],
+            strategy='replace'
+        )
+
+    def sync_bridge_unicard_selections(self):
+        self._sync_item(
+            "玉山Unicard方案訂閱歷史", 
+            "bridge_unicard_selections", 
+            "bridge_unicard_selections", 
+            BRIDGE_UNICARD_SELECTION_COL_MAPPING, 
+            indices=['rules_reward_program', 'campaign_reward_program', 'start_date', 'end_date'],
+            strategy='replace'
+        )
+
+    def sync_bridge_uniopen_visit_spots(self):
+        self._sync_item(
+            "華南Uniopen踩點加碼歷史", 
+            "bridge_uniopen_visit_spots", 
+            "bridge_uniopen_visit_spots", 
+            BRIDGE_UNIOPEN_VISIT_SPOTS_COL_MAPPING, 
+            indices=['campaign_reward_program', 'rules_reward_program', 'start_date', 'end_date'],
+            strategy='replace'
+        )
+
+    def sync_dim_fx_table(self):
+        self._sync_item(
+            "匯率每日表", 
+            "dim_fx_table", 
+            "dim_fx_table", 
+            FX_TABLE_COL_MAPPING, 
+            indices=['conversion_date', 'bank_name', 'currency_type'],
+            strategy='replace'
+        )
+
     def sync_all(self):
         logger.info("🚀 開始執行全量配置同步...")
         self.sync_cards()
@@ -135,6 +179,10 @@ class ConfigSyncManager:
         self.sync_reward_base()
         self.sync_reward_campaigns()
         self.sync_reward_rules()
+        self.sync_bridge_cube_selections()
+        self.sync_bridge_unicard_selections()
+        self.sync_bridge_uniopen_visit_spots()
+        self.sync_dim_fx_table()
         logger.info("🏁 全量配置同步完成！")
 
 if __name__ == "__main__":

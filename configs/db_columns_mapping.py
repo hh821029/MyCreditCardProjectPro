@@ -68,3 +68,33 @@ def REWARD_RULE_COL_MAPPING():
         TC.MERCHANT_DISPLAY, TC.PROGRAM_START_DATE, TC.PROGRAM_END_DATE, 
         TC.MERCHANT_RATE, TC.PRIORITY, TC.REWARD_CAL_BREAK
     )
+
+def BRIDGE_CUBE_SELECTION_COL_MAPPING():
+    """對應 bridge_cube_selections_private.csv"""
+    return TC.get_mapping(
+        TC.BASE_REWARD_PROGRAM, TC.PROGRAM_START_DATE, TC.PROGRAM_END_DATE,
+        ('備註', TC.REMARK)
+    )
+
+def BRIDGE_UNICARD_SELECTION_COL_MAPPING():
+    """對應 bridge_unicard_selections_private.csv"""
+    return TC.get_mapping(
+        TC.RULES_REWARD_PROGRAM, TC.CAMPAIGN_REWARD_PROGRAM, 
+        TC.PROGRAM_START_DATE, TC.PROGRAM_END_DATE, 
+        TC.MAX_POSTING_DATE, TC.CAMPAIGN_REWARD_RATE, TC.CAP_AMOUNT
+    )
+
+def BRIDGE_UNIOPEN_VISIT_SPOTS_COL_MAPPING():
+    """對應 bridge_uniopen_visit_spots_private.csv"""
+    return TC.get_mapping(
+        TC.CAMPAIGN_REWARD_PROGRAM, TC.RULES_REWARD_PROGRAM,
+        TC.PROGRAM_START_DATE, TC.PROGRAM_END_DATE,
+        TC.CAMPAIGN_REWARD_RATE
+    )
+
+def FX_TABLE_COL_MAPPING():
+    """對應 dim_fx_table.csv"""
+    return TC.get_mapping(
+        TC.CONV_DATE, TC.BANK_NAME, TC.CURRENCY, TC.FX_RATE,
+        ('備註', TC.REMARK)
+    )

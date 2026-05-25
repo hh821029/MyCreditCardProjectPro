@@ -47,6 +47,8 @@ class TransactionColumn(Enum):
     BANK_NAME = ('bank_name', 'str', 50, 'bank_name')
     CARD_NO = ('card_no', 'str', 4, 'card_no')
     CARD_TYPE = ('card_type', 'str', 100, 'card_type')
+    CARD_NETWORKS = ('card_networks', 'str', 50, 'card_networks')
+    SMART_CARD_TYPE = ('smart_card_type', 'str', 50, 'smart_card_type')
     IS_DUAL_CURRENCY = ('is_dual_currency', 'bool', None, 'is_dual_currency')
     FX_TYPE = ('fx_type', 'str', 5, 'fx_type')
     ACTIVE_STATUS = ('active_status', 'str', 20, 'active_status')
@@ -442,8 +444,12 @@ DATA_DIR = os.path.join(ROOT_DIR, 'data')          # 輸入區
 OUTPUT_DIR = os.path.join(ROOT_DIR, 'output')      # 輸出區
 CONFIG_DIR = os.path.join(ROOT_DIR, 'configs')     # 規則設定檔區
 
-# 資料庫路徑
-DB_PATH = os.path.join(OUTPUT_DIR, 'Bills.db')
+# 資料庫路徑 (雙資料庫獨立設計)
+TRANSACTIONS_DB_PATH = os.path.join(OUTPUT_DIR, 'TransactionsBills.db')
+CONFIGS_DB_PATH = os.path.join(OUTPUT_DIR, 'TransactionsConfigs.db')
+
+# 向後相容別名：指向主要交易資料庫，避免專案其他地方崩潰
+DB_PATH = TRANSACTIONS_DB_PATH
 
 # 確保輸出目錄存在
 os.makedirs(OUTPUT_DIR, exist_ok=True)

@@ -2,6 +2,7 @@ import os
 import logging
 from typing import Optional, List
 import pandas as pd
+import const
 from loaders.config_loader import ConfigLoader
 from loaders.sqlite_loader import SQLiteLoader
 from configs.db_columns_mapping import (
@@ -27,9 +28,9 @@ class ConfigSyncManager:
     1. 使用 ConfigLoader 處理編碼與私有檔合併 (Append/Replace)
     2. 使用 SQLiteLoader 執行資料庫寫入與索引建立
     """
-    def __init__(self, config_dir='configs', db_path='output/Configs.db'):
+    def __init__(self, config_dir='configs', db_path=None):
         self.config_dir = config_dir
-        self.db_path = db_path
+        self.db_path = db_path if db_path is not None else const.CONFIGS_DB_PATH
         self.loader = SQLiteLoader(self.db_path)
 
     def _sync_item(self, name: str, csv_base: str, table_name: str, mapping_func, indices: Optional[List[str]] = None, strategy: str = 'append'):
@@ -152,7 +153,7 @@ class ConfigSyncManager:
 
     def sync_bridge_uniopen_visit_spots(self):
         self._sync_item(
-            "華南Uniopen踩點加碼歷史", 
+            "中信Uniopen踩點加碼歷史", 
             "bridge_uniopen_visit_spots", 
             "bridge_uniopen_visit_spots", 
             BRIDGE_UNIOPEN_VISIT_SPOTS_COL_MAPPING, 

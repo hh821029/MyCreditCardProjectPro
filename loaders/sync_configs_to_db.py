@@ -16,7 +16,8 @@ from configs.db_columns_mapping import (
     BRIDGE_CUBE_SELECTION_COL_MAPPING,
     BRIDGE_UNICARD_SELECTION_COL_MAPPING,
     BRIDGE_UNIOPEN_VISIT_SPOTS_COL_MAPPING,
-    FX_TABLE_COL_MAPPING
+    FX_TABLE_COL_MAPPING,
+    BILLING_HISTORY_COL_MAPPING,
 )
 
 logger = logging.getLogger(__name__)
@@ -83,7 +84,7 @@ class ConfigSyncManager:
         self._sync_item(
             "支付/處理流程", 
             "dim_payment_process", 
-            "dim_payment_processes", 
+            "dim_payment_process", 
             PAYMENT_PROCESS_COL_MAPPING, 
             indices=['payment_process', 'payment_process_pattern'],
             strategy='append'  # 支付/處理流程資料以合併方式處理
@@ -93,7 +94,7 @@ class ConfigSyncManager:
         self._sync_item(
             "電商平台", 
             "dim_ec_platform", 
-            "dim_ec_platforms", 
+            "dim_ec_platform", 
             EC_PLATFORM_COL_MAPPING, 
             indices=['ec_platform', 'ec_platform_pattern'],
             strategy='append'
@@ -104,7 +105,7 @@ class ConfigSyncManager:
         self._sync_item(
             "基礎回饋計畫", 
             "dim_card_rewards_base", 
-            "dim_reward_base", 
+            "dim_card_rewards_base", 
             REWARD_PROGRAM_COL_MAPPING, 
             indices=['reward_program', 'card_type', 'bank_name'],
             strategy='replace'
@@ -115,7 +116,7 @@ class ConfigSyncManager:
         self._sync_item(
             "活動加碼回饋", 
             "dim_card_rewards_campaigns", 
-            "dim_reward_campaigns", 
+            "dim_card_rewards_campaigns", 
             REWARD_CAMPAIGN_COL_MAPPING, 
             indices=['campaign_name', 'card_type', 'bank_name'],
             strategy='replace'
@@ -171,6 +172,16 @@ class ConfigSyncManager:
             strategy='replace'
         )
 
+    def sync_dim_billing_history(self):
+        self._sync_item(
+            "對帳單歷史", 
+            "dim_billing_history", 
+            "dim_billing_history", 
+            BILLING_HISTORY_COL_MAPPING, 
+            indices=['bank_name', 'statement_month'],
+            strategy='replace'
+        )
+
     def sync_all(self):
         logger.info("🚀 開始執行全量配置同步...")
         self.sync_cards()
@@ -184,6 +195,7 @@ class ConfigSyncManager:
         self.sync_bridge_unicard_selections()
         self.sync_bridge_uniopen_visit_spots()
         self.sync_dim_fx_table()
+        self.sync_dim_billing_history()
         logger.info("🏁 全量配置同步完成！")
 
 if __name__ == "__main__":

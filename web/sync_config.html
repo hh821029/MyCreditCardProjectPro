@@ -4,9 +4,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MyCreditCardProjectPro 控制台 - 主頁</title>
+    <title>MyCreditCardProjectPro 控制台 - 設定同步</title>
     <style>
-        /* 基礎簡約排版 */
+        /* 基礎簡約排版，與主頁完全對齊 */
         body {
             font-family: Arial, sans-serif;
             background-color: #fafafa;
@@ -78,7 +78,7 @@
         .button-group {
             display: flex;
             flex-wrap: wrap;
-            gap: 10px;
+            gap: 12px;
         }
 
         button {
@@ -176,35 +176,39 @@
 
 <body>
     <div class="container">
-        <h1>MyCreditCardProjectPro 控制台</h1>
+        <h1>MyCreditCardProjectPro 設定同步面板</h1>
 
-        <!-- 簡單的導覽超連結 -->
+        <!-- 導覽超連結 -->
         <div class="nav-bar">
-            <span class="active">🏠 主控制台</span> | 
-            <a href="sync_config.html">⚙️ 設定同步面板</a>
+            <a href="index.html">🏠 主控制台</a> | 
+            <span class="active">⚙️ 設定同步面板</span>
         </div>
 
-        <!-- 區塊一：帳單資料載入與處理 (ETL) -->
+        <!-- 區塊一：單項資料同步 -->
         <div class="section-box">
-            <div class="section-title">📦 帳單資料處理 (ETL 流程)</div>
-            <p style="margin: 0 0 10px 0; font-size: 13px; color: #666;">載入原始信用卡帳單資料並寫入 SQLite 資料庫主表。</p>
+            <div class="section-title">📄 單項資料同步 (CSV ➡️ SQLite)</div>
+            <p style="margin: 0 0 12px 0; font-size: 13px; color: #666;">將指定 CSV 檔案中的設定資料更新或合併寫入至資料庫中。</p>
             <div class="button-group">
-                <button id="btnEtl" class="btn-primary" onclick="runTask('etl')">🚀 執行 ETL 流程</button>
+                <button id="btnConfig_Card" onclick="runTask('config_card')">💳 信用卡資料載入</button>
+                <button id="btnConfig_Reward" onclick="runTask('config_reward')">📜 回饋規則載入</button>
+                <button id="btnConfig_Mer" onclick="runTask('config_mer')">🏪 商家資料載入</button>
+                <button id="btnConfig_PayGate" onclick="runTask('config_paygate')">👛 支付錢包資料載入</button>
+                <button id="btnConfig_BillingHistory" onclick="runTask('config_billing_history')">📅 對帳單歷史載入</button>
+                <button id="btnConfig_FxTable" onclick="runTask('config_fx_table')">💱 匯率每日表載入</button>
+            </div>
+        </div>
+
+        <!-- 區塊二：全量設定同步與操作 -->
+        <div class="section-box">
+            <div class="section-title">🔄 全量設定同步</div>
+            <p style="margin: 0 0 12px 0; font-size: 13px; color: #666;">執行所有 CSV 設定檔案的一鍵同步與資料庫載入。</p>
+            <div class="button-group">
+                <button id="btnConfig_All" class="btn-primary" onclick="runTask('config_all')">⚙️ 所有設定資料同步</button>
                 <button id="btnClear" class="btn-secondary" onclick="clearConsole()">🧹 清空控制台</button>
             </div>
         </div>
 
-        <!-- 區塊二：數據分析與回饋計算 -->
-        <div class="section-box">
-            <div class="section-title">📊 數據分析與回饋計算</div>
-            <p style="margin: 0 0 10px 0; font-size: 13px; color: #666;">執行 RFM 行為特徵分析，或呼叫回饋引擎計算各筆交易的現金/紅利回饋。</p>
-            <div class="button-group">
-                <button id="btnAnalysis" onclick="runTask('analytics')">📊 執行 RFM 分析</button>
-                <button id="btnRewards" onclick="runTask('rewards')">💰 計算回饋金</button>
-            </div>
-        </div>
-
-        <!-- 互動狀態引導 -->
+        <!-- 狀態引導欄 -->
         <div id="status" class="status-box">目前狀態：閒置中 (等待指令啟動)</div>
 
         <!-- 即時日誌控制台 -->
@@ -218,7 +222,7 @@
             const consoleDiv = document.getElementById('console');
             const span = document.createElement('span');
 
-            // 關鍵字上色
+            // 關鍵字著色
             if (message.includes('INFO')) span.className = 'log-info';
             else if (message.includes('WARNING')) span.className = 'log-warning';
             else if (message.includes('ERROR')) span.className = 'log-error';
@@ -230,7 +234,7 @@
             span.textContent = message + '\n';
             consoleDiv.appendChild(span);
 
-            // 自動捲動
+            // 自動滾動到底部
             consoleDiv.scrollTop = consoleDiv.scrollHeight;
         }
 
@@ -246,14 +250,14 @@
             const allButtons = document.querySelectorAll('button');
             const statusDiv = document.getElementById('status');
 
-            // 鎖定所有按鈕防止重疊執行
+            // 鎖定所有按鈕防止重複觸發與衝突
             allButtons.forEach(btn => btn.disabled = true);
 
-            // 變更狀態文字與視覺標記
-            statusDiv.textContent = `目前狀態：正在執行 [${type.toUpperCase()}] 任務中...`;
+            // 更新狀態顯示
+            statusDiv.textContent = `目前狀態：正在執行 [${type.toUpperCase()}] 設定同步...`;
             statusDiv.className = "status-box status-busy";
 
-            appendLog(`\n[${new Date().toLocaleTimeString()}] >>>>> 啟動 ${type.toUpperCase()} 任務 <<<<<`);
+            appendLog(`\n[${new Date().toLocaleTimeString()}] >>>>> 啟動 ${type.toUpperCase()} 設定同步 <<<<<`);
 
             const url = `/api/run/${type}`;
             eventSource = new EventSource(url);
@@ -270,9 +274,9 @@
                 // 解鎖所有按鈕
                 allButtons.forEach(btn => btn.disabled = false);
 
-                statusDiv.textContent = `目前狀態：[${type.toUpperCase()}] 任務執行結束 (閒置中)`;
+                statusDiv.textContent = `目前狀態：[${type.toUpperCase()}] 設定同步結束 (閒置中)`;
                 statusDiv.className = "status-box";
-                appendLog(`[${new Date().toLocaleTimeString()}] <<<<< ${type.toUpperCase()} 任務完成 >>>>>\n`);
+                appendLog(`[${new Date().toLocaleTimeString()}] <<<<< ${type.toUpperCase()} 設定同步完成 >>>>>\n`);
             };
         }
     </script>

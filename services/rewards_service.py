@@ -3,47 +3,25 @@ import os
 import pandas as pd
 import logging
 import sqlite3
+import const
 from typing import Dict, Optional
 from processors.rewards import RewardsCalculator
 from loaders.config_loader import ConfigLoader
+import services.transaction_service as ts
 
 logger = logging.getLogger(__name__)
 
-import const
 
 OUTPUT_DIR = const.OUTPUT_DIR
 DB_PATH = const.DB_PATH
 CONFIG_DIR = const.CONFIG_DIR
+ANALYSIS_DB_PATH = const.ANALYSIS_DB_PATH
 
 def run_rewards_calculation():
     """執行回饋計算並產出 Demo 結果"""
-    logger.info("💰 啟動回饋計算服務 (規範 V2)...")
-
-    if not os.path.exists(DB_PATH):
-        logger.error(f"❌ 資料庫不存在: {DB_PATH}")
-        return
-
     try:
-        import const
         # 1. 執行 SQL 提取 (直接更名與轉型)
-        # 注意：SQLite 沒有真正的日期型態，所以我們選取後交給 Pandas parse_dates 處理
-        query = f"""
-            SELECT 
-                transaction_date AS {const.COL_TXN_DATE},
-                merchant_display AS {const.COL_MERCHANT_DISPLAY},
-                merchant_location AS {const.COL_LOCATION},
-                mobile_payment AS {const.COL_MOBILE_PAY},
-                CAST(payment_amount AS REAL) AS {const.COL_PAY_AMOUNT},
-                CAST(card_type AS TEXT) AS {const.COL_CARD_TYPE},
-                bank_name AS {const.COL_BANK_NAME},
-                transaction_type AS {const.COL_TXN_TYPE}
-            FROM all_transactions
-            WHERE transaction_type NOT IN ('繳款', '紅利折抵', '各項費用')
-        """
-        
-        with sqlite3.connect(DB_PATH) as conn:
-            df_bills = pd.read_sql(query, conn, parse_dates=[const.COL_TXN_DATE])
-        
+        df_bills = ts.get_transactions(window=const.TimeWindow.LIFETIME,exclude_non_retail=True)
         if df_bills.empty:
             logger.warning("⚠️ 資料庫中無交易資料。")
             return
@@ -59,8 +37,8 @@ def run_rewards_calculation():
         calculator = RewardsCalculator(configs=configs)
         df_result = calculator.process(df_bills)
         
-        # 4. 寫回資料庫
-        with sqlite3.connect(DB_PATH) as conn:
+        # 4. 寫入分析資料庫
+        with sqlite3.connect(ANALYSIS_DB_PATH) as conn:
             df_result.to_sql('analysis_rewards', conn, if_exists='replace', index=False)
             
         # 5. 產出 Demo 結果 (Before-After 參照用)

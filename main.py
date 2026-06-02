@@ -89,7 +89,7 @@ if __name__ == "__main__":
         elif choice == '3':
             safe_execute("回饋計算", run_rewards_calculation, require_db=True)
         elif choice == 'Q':
-            print("\n👋 感謝使用，程式已結束。")
+            print("\n感謝使用，程式已結束。")
             break
         elif choice == '':
             continue

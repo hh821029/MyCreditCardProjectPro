@@ -161,7 +161,7 @@ def generate_spending_matrix(df_raw, time_windows=None):
             values='payment_amount', 
             index='category', 
             columns='mobile_payment', 
-            aggfunc=np.sum, 
+            aggfunc='sum', 
             fill_value=0
         )
         

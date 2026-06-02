@@ -100,3 +100,10 @@ def FX_TABLE_COL_MAPPING():
         TC.CONV_DATE, TC.BANK_NAME, TC.CURRENCY, TC.FX_RATE,
         ('備註', TC.REMARK)
     )
+
+def BILLING_HISTORY_COL_MAPPING():
+    """對應 dim_billing_history.csv"""
+    return TC.get_mapping(
+        TC.BANK_NAME, TC.CARD_TYPE,
+        TC.STAT_MON, TC.CLOSING_DATE, TC.ACT_CLOSING_DATE
+    )

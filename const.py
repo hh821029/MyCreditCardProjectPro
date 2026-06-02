@@ -2,6 +2,8 @@
 import pandas as pd
 import os
 from enum import Enum
+from datetime import datetime, timedelta
+from typing import Optional, List, Dict, Any
 
 pd.set_option('future.no_silent_downcasting', True)
 
@@ -19,6 +21,8 @@ class TransactionColumn(Enum):
     POST_DATE = ('posting_date', 'date', None, 'posting_date')
     CONV_DATE = ('conversion_date', 'date', None, 'conversion_date')
     STAT_MON = ('statement_month', 'date', None, 'statement_month')
+    CLOSING_DATE = ('closing_date', 'date', None, 'closing_date')
+    ACT_CLOSING_DATE = ('actual_closing_date', 'date', None, 'actual_closing_date')
     
     # 商店消費資訊
     MERCHANT = ('merchant', 'str', 500, 'merchant_name')
@@ -335,6 +339,70 @@ class RewardType(Enum):
             for member in cls
         }
 
+class TimeWindow(Enum):
+    LAST_MONTH = (30, '近一個月', '30d', '30d_')
+    LAST_QUARTER = (90, '近一季', '90d', '90d_')
+    LAST_HALF_YEAR = (180, '近半年', '180d', '180d_')
+    LAST_YEAR = (365, '近一年', '365d', '365d_')
+    LIFETIME = (None, '全歷史', 'life', 'life_')
+
+    @property
+    def days(self) -> Optional[int]:
+        return self.value[0]
+
+    @property
+    def desc(self) -> str:
+        return self.value[1]
+
+    @property
+    def key_suffix(self) -> str:
+        return self.value[2]
+
+    @property
+    def prefix(self) -> str:
+        return self.value[3]
+
+    def get_start_date(self, anchor_date: Optional[str] = None) -> Optional[str]:
+        """
+        根據基準日動態計算起始日期 (YYYY-MM-DD)。
+        :param anchor_date: YYYY-MM-DD 格式基準日，若為 None 則預設為今天。
+        """
+        if self.days is None:
+            return None
+        base_dt = datetime.strptime(anchor_date, "%Y-%m-%d") if anchor_date else datetime.today()
+        start_dt = base_dt - timedelta(days=self.days)
+        return start_dt.strftime("%Y-%m-%d")
+
+    @classmethod
+    def to_list(cls) -> List[Dict[str, Any]]:
+        """
+        轉換為相容新系統分析模組 (rfm_modules) 的字典陣列格式。
+        """
+        return [
+            {
+                'days': member.days,
+                'desc': member.desc,
+                'suffix': member.key_suffix,
+                'prefix': member.prefix
+            }
+            for member in cls
+        ]
+        
+    @classmethod
+    def to_legacy_list(cls) -> List[Dict[str, Any]]:
+        """
+        轉換為相容舊系統分析模組 (rfm_modules) 的字典陣列格式。
+        """
+        return [
+            {
+                'days': member.days,
+                'prefix': f"{member.key_suffix}_",
+                'suffix': member.key_suffix,
+                'desc': member.desc 
+            }
+            for member in cls
+        ]
+
 # ==========================================
 # 2. 交易資料欄位 (Transactions)
 # ==========================================
@@ -447,6 +515,7 @@ CONFIG_DIR = os.path.join(ROOT_DIR, 'configs')     # 規則設定檔區
 # 資料庫路徑 (雙資料庫獨立設計)
 TRANSACTIONS_DB_PATH = os.path.join(OUTPUT_DIR, 'TransactionsBills.db')
 CONFIGS_DB_PATH = os.path.join(OUTPUT_DIR, 'TransactionsConfigs.db')
+ANALYSIS_DB_PATH = os.path.join(OUTPUT_DIR, 'TransactionsAnalysis.db')
 
 # 向後相容別名：指向主要交易資料庫，避免專案其他地方崩潰
 DB_PATH = TRANSACTIONS_DB_PATH

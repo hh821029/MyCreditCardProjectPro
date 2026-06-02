@@ -4,7 +4,9 @@ import pandas as pd
 import os
 import logging
 import re
+import const
 from analytics import rfm_modules
+import services.transaction_service as ts
 
 # ==========================================
 # 設定日誌 (Logging)
@@ -12,10 +14,8 @@ from analytics import rfm_modules
 logger = logging.getLogger(__name__)
 
 # ==========================================
-# 核心路徑設定 (引用自 const.py)
+# rfm 分析與路徑設定 (引用自 const.py)
 # ==========================================
-import const
-
 OUTPUT_DIR = const.OUTPUT_DIR
 DB_PATH = const.DB_PATH
 MATRIX_DIR = os.path.join(OUTPUT_DIR, 'matrix')
@@ -23,19 +23,10 @@ CONFIG_DIR = const.CONFIG_DIR
 
 os.makedirs(MATRIX_DIR, exist_ok=True)
 
-RFM_WINDOWS = [
-    {'days': None, 'prefix': 'life_', 'desc': '全歷史'},
-    {'days': 365,  'prefix': '365d_', 'desc': '近一年'},
-    {'days': 180,  'prefix': '180d_', 'desc': '近半年'},
-    {'days': 90,   'prefix': '90d_',  'desc': '近一季'}
-]
+RFM_WINDOWS = const.TimeWindow.to_legacy_list()
 
-MATRIX_WINDOWS = [
-    {'days': 90,   'suffix': '90d',      'desc': '近一季'},
-    {'days': 180,  'suffix': '180d',     'desc': '近半年'},
-    {'days': 365,  'suffix': '365d',     'desc': '近一年'},
-    {'days': None, 'suffix': 'lifetime', 'desc': '全歷史'}
-]
+MATRIX_WINDOWS = const.TimeWindow.to_list()
+
 
 # ==========================================
 # 前處理函式：拔除支付前綴
@@ -81,22 +72,7 @@ def clean_merchant_prefix(df: pd.DataFrame, config_dir: str) -> pd.DataFrame:
 def run_analytics():
     logger.info("🚀 [Analytics Pipeline] 開始執行全方位 RFM 分析...")
 
-    # ==========================================
-    # 2. 讀取 DB (Extract)
-    # ==========================================
-    if not os.path.exists(DB_PATH):
-        logger.error(f"❌ 資料庫不存在: {DB_PATH} (請先執行 ETL main.py)")
-        return
-
-    with sqlite3.connect(DB_PATH) as conn:
-        logger.info("📥 讀取清洗完畢的交易資料...")
-        sql = """
-        SELECT transaction_id, transaction_date, merchant_display, 
-               mobile_payment, payment_amount, 
-               transaction_type, bank_name, card_type
-        FROM all_transactions
-        """
-        df_raw = pd.read_sql(sql, conn)
+    df_raw = ts.get_transactions(window=const.TimeWindow.LIFETIME)
 
     if df_raw.empty:
         logger.error("❌ 資料庫無資料，終止程序。")
@@ -162,4 +138,4 @@ def run_analytics():
     except Exception as e:
         logger.error(f"❌ 寫入過程發生錯誤: {e}", exc_info=True)
 
-    logger.info("🎉 全部分析完成！你的財務數據已準備就緒。")
+

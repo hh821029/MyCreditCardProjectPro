@@ -1,5 +1,6 @@
 # MyCreditCardProjectPro 專案執行指令集 (GEMINI.md)
 
+
 ## 1. 編碼處理規範 (Encoding)
 - **讀取階段**：處理台灣銀行之 CSV 或 PDF 匯出檔時，依序嘗試使用`UTF-8`→`Big5`→`cp950` 編碼，並在讀取到亂碼時更換指定的編碼。
 - **寫入階段**：所有輸出的結果檔案（CSV、JSON 等）與專案內的設定檔更新，統一使用 `UTF-8` 編碼（含 BOM 或不含，視具體需求而定，預設不含）。
@@ -70,9 +71,14 @@
     *   `bridge_reward_rules.csv` 關鍵欄位：`rules_reward_program`, `mobile_payment`, `merchant_display`, `start_date`, `end_date`, `merchant_rate`, `priority`, `reward_cal_break`。
     *   交易資料比對優先採用 `card_type` 作為卡片識別。
 
-## 8. README.md規範 (README.md)
-1.  **修改權限**：整個README.md的修改要事先詢問，並且僅提供文字跟修改建議。
+## 8. 內容輸出規範
+1.  **README.md修改權限**：整個README.md的修改要事先詢問，並且僅提供文字跟修改建議。
+2.  **暫時資料的輸出位址**：需要檢查的暫時資料請以csv格式並明確命名後輸出至 `output\` (該資料夾已被.gitignore忽略)，並提示使用者去該資料夾查看。 
 
-## 9. 內容輸出規範
-1.  **暫時資料的輸出位址**：需要檢查的暫時資料請以csv格式並明確命名後輸出至 `output\` (該資料夾已被.gitignore忽略)，並提示使用者去該資料夾查看。 
+## 9. 開發文件撰寫模式
+1.在對話框中輸入提示詞「進入開發文件撰寫模式」開啟本模式，並在Gemini.md的第一行新增「目前為開發文件撰寫模式」。
+2.在對話框中輸入提示詞「結束開發文件撰寫模式」來結束本模式，並移除Gemini.md的第一行「目前為開發文件撰寫模式」。
+3.Gemini.md的第一行存在「目前為開發文件撰寫模式」時，對所有markdown以外的檔案均採取唯讀模式，僅能檢視，不做任何修改。
+
+
 

@@ -5,189 +5,27 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MyCreditCardProjectPro 控制台 - 主頁</title>
-    <style>
-        /* 基礎簡約排版 */
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #fafafa;
-            margin: 0;
-            padding: 20px;
-            color: #333;
-        }
-
-        .container {
-            max-width: 900px;
-            margin: 0 auto;
-            background: #ffffff;
-            padding: 20px;
-            border: 1px solid #ddd;
-            border-radius: 6px;
-        }
-
-        h1 {
-            color: #222;
-            border-bottom: 2px solid #333;
-            padding-bottom: 10px;
-            margin-top: 0;
-        }
-
-        /* 簡單的超連結導覽列 */
-        .nav-bar {
-            background-color: #f0f0f0;
-            padding: 10px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-            margin-bottom: 20px;
-        }
-
-        .nav-bar a {
-            text-decoration: none;
-            color: #0066cc;
-            font-weight: bold;
-            margin-right: 15px;
-        }
-
-        .nav-bar a:hover {
-            text-decoration: underline;
-        }
-
-        .nav-bar span.active {
-            font-weight: bold;
-            color: #333;
-            margin-right: 15px;
-        }
-
-        /* 功能區塊排版 */
-        .section-box {
-            border: 1px solid #ddd;
-            padding: 15px;
-            border-radius: 4px;
-            margin-bottom: 20px;
-            background-color: #fcfcfc;
-        }
-
-        .section-title {
-            font-size: 16px;
-            font-weight: bold;
-            margin-bottom: 10px;
-            color: #444;
-            border-left: 4px solid #0066cc;
-            padding-left: 8px;
-        }
-
-        .button-group {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
-        }
-
-        button {
-            padding: 10px 18px;
-            font-size: 14px;
-            font-weight: bold;
-            border: 1px solid #bbb;
-            border-radius: 4px;
-            background-color: #f5f5f5;
-            cursor: pointer;
-            color: #333;
-            transition: background-color 0.1s;
-        }
-
-        button:hover {
-            background-color: #e0e0e0;
-        }
-
-        button:disabled {
-            background-color: #eee;
-            color: #999;
-            border-color: #ddd;
-            cursor: not-allowed;
-        }
-
-        .btn-primary {
-            background-color: #0066cc;
-            color: white;
-            border-color: #0052a3;
-        }
-
-        .btn-primary:hover {
-            background-color: #0052a3;
-        }
-
-        .btn-secondary {
-            background-color: #777;
-            color: white;
-            border-color: #666;
-        }
-
-        .btn-secondary:hover {
-            background-color: #666;
-        }
-
-        /* 狀態引導欄 */
-        .status-box {
-            background-color: #eef7f2;
-            border: 1px solid #ccebd9;
-            padding: 10px;
-            border-radius: 4px;
-            margin-bottom: 20px;
-            font-weight: bold;
-            color: #1b5e20;
-        }
-
-        .status-busy {
-            background-color: #fff3cd;
-            border-color: #ffeeba;
-            color: #856404;
-        }
-
-        /* 標準控制台 */
-        .console {
-            background-color: #1e1e1e;
-            color: #d4d4d4;
-            padding: 15px;
-            border-radius: 4px;
-            font-family: monospace;
-            height: 400px;
-            overflow-y: auto;
-            white-space: pre-wrap;
-            font-size: 13px;
-            line-height: 1.5;
-            border: 1px solid #333;
-        }
-
-        .log-info {
-            color: #85c1e9;
-        }
-
-        .log-warning {
-            color: #f8c471;
-        }
-
-        .log-error {
-            color: #f1948a;
-        }
-
-        .log-success {
-            color: #82e0aa;
-        }
-    </style>
+    <!-- 引入高品質字型 Outfit -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- 引入通用外部樣式表 -->
+    <link rel="stylesheet" href="styles.css">
 </head>
 
 <body>
     <div class="container">
-        <h1>MyCreditCardProjectPro 控制台</h1>
+        <h1>📊 MyCreditCardProjectPro 控制台</h1>
 
         <!-- 簡單的導覽超連結 -->
         <div class="nav-bar">
-            <span class="active">🏠 主控制台</span> | 
+            <span class="active">🏠 主控制台</span> |
             <a href="sync_config.html">⚙️ 設定同步面板</a>
         </div>
 
         <!-- 區塊一：帳單資料載入與處理 (ETL) -->
         <div class="section-box">
             <div class="section-title">📦 帳單資料處理 (ETL 流程)</div>
-            <p style="margin: 0 0 10px 0; font-size: 13px; color: #666;">載入原始信用卡帳單資料並寫入 SQLite 資料庫主表。</p>
+            <p style="margin: 0 0 15px 0; font-size: 13px; color: var(--text-secondary);">載入原始信用卡帳單資料並寫入 SQLite 資料庫主表。
+            </p>
             <div class="button-group">
                 <button id="btnEtl" class="btn-primary" onclick="runTask('etl')">🚀 執行 ETL 流程</button>
                 <button id="btnClear" class="btn-secondary" onclick="clearConsole()">🧹 清空控制台</button>
@@ -197,10 +35,56 @@
         <!-- 區塊二：數據分析與回饋計算 -->
         <div class="section-box">
             <div class="section-title">📊 數據分析與回饋計算</div>
-            <p style="margin: 0 0 10px 0; font-size: 13px; color: #666;">執行 RFM 行為特徵分析，或呼叫回饋引擎計算各筆交易的現金/紅利回饋。</p>
-            <div class="button-group">
-                <button id="btnAnalysis" onclick="runTask('analytics')">📊 執行 RFM 分析</button>
-                <button id="btnRewards" onclick="runTask('rewards')">💰 計算回饋金</button>
+            <p style="margin: 0 0 15px 0; font-size: 13px; color: var(--text-secondary);">執行 RFM
+                行為特徵分析，或呼叫回饋引擎計算各筆交易的現金/紅利回饋。</p>
+
+            <div class="button-group" style="margin-bottom: 20px;">
+                <button id="btnFetch" class="btn-primary" style="background: linear-gradient(135deg, #ec4899, #8b5cf6);"
+                    onclick="fetchAnalyzableData()">🔍 取得目前可分析資料</button>
+                <button id="btnAnalysis" onclick="runTask('analytics')" disabled>📊 執行 RFM 分析</button>
+                <button id="btnRewards" onclick="runTask('rewards')" disabled>💰 計算回饋金</button>
+            </div>
+
+            <!-- 可分析資料篩選區 (預設隱藏，待資料取得後顯示) -->
+            <div id="filterSection" class="filter-section" style="display: none;">
+                <div class="filter-title">⚙️ 可分析資料篩選設定 (第一階段：展示勾選狀態)</div>
+                <div class="filter-container">
+                    <!-- 銀行卡別卡片 -->
+                    <div class="filter-card">
+                        <div class="filter-card-header">
+                            <span>🏦 銀行別名</span>
+                            <div class="filter-actions">
+                                <span class="filter-link" onclick="toggleAll('bank', true)">全選</span>
+                                <span class="filter-link" onclick="toggleAll('bank', false)">清除</span>
+                            </div>
+                        </div>
+                        <div id="bankList" class="filter-list"></div>
+                    </div>
+
+                    <!-- 信用卡名稱 -->
+                    <div class="filter-card">
+                        <div class="filter-card-header">
+                            <span>💳 卡片名稱</span>
+                            <div class="filter-actions">
+                                <span class="filter-link" onclick="toggleAll('card', true)">全選</span>
+                                <span class="filter-link" onclick="toggleAll('card', false)">清除</span>
+                            </div>
+                        </div>
+                        <div id="cardList" class="filter-list"></div>
+                    </div>
+
+                    <!-- 第三方支付 -->
+                    <div class="filter-card">
+                        <div class="filter-card-header">
+                            <span>📱 第三方支付</span>
+                            <div class="filter-actions">
+                                <span class="filter-link" onclick="toggleAll('payment', true)">全選</span>
+                                <span class="filter-link" onclick="toggleAll('payment', false)">清除</span>
+                            </div>
+                        </div>
+                        <div id="paymentList" class="filter-list"></div>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -213,6 +97,7 @@
 
     <script>
         let eventSource = null;
+        let isFirstAnalyzableFetch = true;
 
         function appendLog(message) {
             const consoleDiv = document.getElementById('console');
@@ -235,7 +120,137 @@
         }
 
         function clearConsole() {
-            document.getElementById('console').innerHTML = '--- 控制台已清空 ---\n';
+            document.getElementById('console').innerHTML = '--- 控制台已清空 ---';
+        }
+
+        function toggleAll(name, checked) {
+            const checkboxes = document.querySelectorAll(`input[name="${name}"]`);
+            checkboxes.forEach(cb => cb.checked = checked);
+        }
+
+        function fetchAnalyzableData() {
+            const btnFetch = document.getElementById('btnFetch');
+            
+            // 首次點擊：自動觸發所有設定同步 (config_all)
+            if (isFirstAnalyzableFetch) {
+                btnFetch.disabled = true;
+                btnFetch.textContent = '⚙️ 正在同步設定檔...';
+                appendLog(`\n[${new Date().toLocaleTimeString()}] >>>>> 首次讀取，自動啟動設定同步流程 <<<<<`);
+                
+                const allButtons = document.querySelectorAll('button');
+                const statusDiv = document.getElementById('status');
+                
+                // 鎖定所有按鈕
+                allButtons.forEach(btn => btn.disabled = true);
+                statusDiv.textContent = `目前狀態：首次讀取，正在執行 [所有設定同步] 中...`;
+                statusDiv.className = "status-box status-busy";
+                
+                if (eventSource) {
+                    eventSource.close();
+                }
+                
+                eventSource = new EventSource('/api/run/config_all');
+                
+                eventSource.onmessage = function (event) {
+                    appendLog(event.data);
+                };
+                
+                eventSource.onerror = function (err) {
+                    console.log("SSE Stream ended.");
+                    eventSource.close();
+                    eventSource = null;
+                    
+                    isFirstAnalyzableFetch = false; // 標記為已同步
+                    
+                    // 解鎖所有按鈕
+                    allButtons.forEach(btn => btn.disabled = false);
+                    statusDiv.textContent = `目前狀態：設定同步完成 (閒置中)`;
+                    statusDiv.className = "status-box";
+                    appendLog(`[${new Date().toLocaleTimeString()}] <<<<< 設定同步完成，開始取得可分析資料 <<<<<`);
+                    
+                    // 連動呼叫真正讀取資料
+                    fetchAnalyzableData();
+                };
+                return;
+            }
+
+            // 正常加載可分析資料 API 流程
+            btnFetch.disabled = true;
+            btnFetch.textContent = '🔍 正在取得可分析資料...';
+
+            appendLog(`\n[${new Date().toLocaleTimeString()}] >>>>> 啟動讀取可分析資料 API <<<<<`);
+
+            fetch('/api/analyzable-data')
+                .then(res => res.json())
+                .then(data => {
+                    if (data.error) {
+                        appendLog(`❌ 取得資料失敗: ${data.error}`);
+                        alert(`取得資料失敗: ${data.error}`);
+                        btnFetch.disabled = false;
+                        btnFetch.textContent = '🔍 取得目前可分析資料';
+                        return;
+                    }
+
+                    // 1. 渲染銀行別
+                    const bankList = document.getElementById('bankList');
+                    bankList.innerHTML = '';
+                    if (data.banks && data.banks.length > 0) {
+                        data.banks.forEach(bank => {
+                            const label = document.createElement('label');
+                            label.className = 'checkbox-label';
+                            label.innerHTML = `<input type="checkbox" name="bank" value="${bank}" checked> ${bank}`;
+                            bankList.appendChild(label);
+                        });
+                    } else {
+                        bankList.innerHTML = '<span style="color: #64748b; font-size: 13px; padding: 6px;">無銀行資料</span>';
+                    }
+
+                    // 2. 渲染卡片名稱
+                    const cardList = document.getElementById('cardList');
+                    cardList.innerHTML = '';
+                    if (data.cards && data.cards.length > 0) {
+                        data.cards.forEach(card => {
+                            const label = document.createElement('label');
+                            label.className = 'checkbox-label';
+                            label.innerHTML = `<input type="checkbox" name="card" value="${card}" checked> ${card}`;
+                            cardList.appendChild(label);
+                        });
+                    } else {
+                        cardList.innerHTML = '<span style="color: #64748b; font-size: 13px; padding: 6px;">無卡片資料</span>';
+                    }
+
+                    // 3. 渲染第三方支付
+                    const paymentList = document.getElementById('paymentList');
+                    paymentList.innerHTML = '';
+                    if (data.payment_processes && data.payment_processes.length > 0) {
+                        data.payment_processes.forEach(pay => {
+                            const label = document.createElement('label');
+                            label.className = 'checkbox-label';
+                            label.innerHTML = `<input type="checkbox" name="payment" value="${pay}" checked> ${pay}`;
+                            paymentList.appendChild(label);
+                        });
+                    } else {
+                        paymentList.innerHTML = '<span style="color: #64748b; font-size: 13px; padding: 6px;">無支付管道資料</span>';
+                    }
+
+                    // 顯示篩選區域
+                    document.getElementById('filterSection').style.display = 'block';
+
+                    // 啟用分析與回饋按鈕
+                    document.getElementById('btnAnalysis').disabled = false;
+                    document.getElementById('btnRewards').disabled = false;
+
+                    btnFetch.disabled = false;
+                    btnFetch.textContent = '🔄 重新取得可分析資料';
+                    appendLog('✅ 成功取得可分析的銀行、卡片及第三方支付清單，已啟用分析與回饋金按鈕。');
+                })
+                .catch(err => {
+                    console.error(err);
+                    appendLog(`❌ 連線失敗，無法取得可分析資料`);
+                    alert('連線失敗，請確認 API 伺服器是否正常運行。');
+                    btnFetch.disabled = false;
+                    btnFetch.textContent = '🔍 取得目前可分析資料';
+                });
         }
 
         function runTask(type) {

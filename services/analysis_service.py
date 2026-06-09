@@ -3,6 +3,7 @@ import sqlite3
 import pandas as pd
 import os
 import logging
+from typing import Optional, List
 import re
 import const
 from analytics import rfm_modules
@@ -69,10 +70,31 @@ def clean_merchant_prefix(df: pd.DataFrame, config_dir: str) -> pd.DataFrame:
     return df
 
 
-def run_analytics():
+def run_analytics(
+    banks: Optional[List[str]] = None,
+    cards: Optional[List[str]] = None,
+    payments: Optional[List[str]] = None,
+    time_window: Optional[str] = None,
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+    location: Optional[str] = None
+):
     logger.info("🚀 [Analytics Pipeline] 開始執行全方位 RFM 分析...")
 
-    df_raw = ts.get_transactions(window=const.TimeWindow.LIFETIME)
+    # 若有傳入任何篩選條件，採用動態 SQL 查詢；否則使用預設之全歷史
+    if any([banks, cards, payments, time_window, start_date, end_date, location]):
+        logger.info("⚙️ 偵測到篩選參數，將採用動態 SQL 篩選交易資料進行分析...")
+        df_raw = ts.query_transactions_modular(
+            banks=banks,
+            cards=cards,
+            payments=payments,
+            time_window=time_window,
+            start_date=start_date,
+            end_date=end_date,
+            location=location
+        )
+    else:
+        df_raw = ts.get_transactions(window=const.TimeWindow.LIFETIME)
 
     if df_raw.empty:
         logger.error("❌ 資料庫無資料，終止程序。")

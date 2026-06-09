@@ -1,9 +1,13 @@
 ## 📅 開發日記 (Dev Log)
 
+* **2026-06-06**
+   * 資料提取更新：將原本設定檔的pandas讀表模式，更新為SQL提取模式。
+   * 前端首頁更新：更新核取方塊作為條件篩選。
+   * 新增開發設計文件：撰寫關於零消費（空資料表）在信用卡行為分析中的商業價值與設計規範 (`docs/zero_transaction_analysis_significance.md`)。
+
 * **2026-05-30**
     * `services/analysis_service.py` 更新：Matrix 產生模組改為使用 `const.TimeWindow` 枚舉，取代硬編碼的字典陣列。
-    * `services/rewards_service.py` 更新：資料提取邏輯整合進 SQL 查詢中，並將分析結果寫入獨立的分析資料庫。 
-    
+    * `services/rewards_service.py` 更新：資料提取邏輯整合進 SQL 查詢中，並將分析結果寫入獨立的分析資料庫。     
 
 * **2026-05-11**
    * 命名調整：將python、資料庫用的名詞調整成snake_case以便識別資料處理變數。

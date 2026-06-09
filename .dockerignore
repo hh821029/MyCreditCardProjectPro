@@ -1,0 +1,47 @@
+# 1. 隱藏 Git 版本控制紀錄與設定
+.git
+.gitignore
+
+# 2. 開發文件 & 設定資料
+docs/
+*.md
+.vscode
+!README.md
+
+# 3. 保護機密資訊與本地端的 SQLite 資料庫
+.venv
+*.db
+*.sqlite3
+.gemini/
+
+# 4. 忽略所有存放設定、實體帳單與原始/暫存資料的資料夾
+configs/
+input/
+output/
+data/
+excel_files/
+
+# 5. 忽略試算表檔案
+*.xlsx
+*.xls
+*.csv
+
+# 7. C# 專案編譯產物與測試
+bin/
+obj/
+*.csproj
+*.sln
+*.cs
+*.csproj.lscache
+
+# 8. 忽略 Python 與系統產生的快取/暫存檔案
+__pycache__/
+*.pyc
+.pytest_cache/
+.mypy_cache/
+.ipynb_checkpoints/
+.DS_Store
+Thumbs.db
+~$*.xlsx
+~$*.xls
+

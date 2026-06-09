@@ -119,7 +119,7 @@ class ConfigSyncManager:
             "dim_card_rewards_campaigns", 
             REWARD_CAMPAIGN_COL_MAPPING, 
             indices=['campaign_name', 'card_type', 'bank_name'],
-            strategy='replace'
+            strategy='append'
         )
 
     def sync_reward_rules(self):

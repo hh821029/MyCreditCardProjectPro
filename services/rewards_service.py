@@ -4,10 +4,11 @@ import pandas as pd
 import logging
 import sqlite3
 import const
-from typing import Dict, Optional
+from typing import Dict, Optional, List
 from processors.rewards import RewardsCalculator
 from loaders.config_loader import ConfigLoader
 import services.transaction_service as ts
+import services.config_service as cs
 
 logger = logging.getLogger(__name__)
 
@@ -17,21 +18,39 @@ DB_PATH = const.DB_PATH
 CONFIG_DIR = const.CONFIG_DIR
 ANALYSIS_DB_PATH = const.ANALYSIS_DB_PATH
 
-def run_rewards_calculation():
+def run_rewards_calculation(
+    banks: Optional[List[str]] = None,
+    cards: Optional[List[str]] = None,
+    payments: Optional[List[str]] = None,
+    time_window: Optional[str] = None,
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+    location: Optional[str] = None
+):
     """執行回饋計算並產出 Demo 結果"""
     try:
         # 1. 執行 SQL 提取 (直接更名與轉型)
-        df_bills = ts.get_transactions(window=const.TimeWindow.LIFETIME,exclude_non_retail=True)
+        if any([banks, cards, payments, time_window, start_date, end_date, location]):
+            logger.info("⚙️ 偵測到篩選參數，將採用動態 SQL 篩選交易資料進行回饋金計算...")
+            df_bills = ts.query_transactions_modular(
+                banks=banks,
+                cards=cards,
+                payments=payments,
+                time_window=time_window,
+                start_date=start_date,
+                end_date=end_date,
+                location=location,
+                exclude_non_retail=True
+            )
+        else:
+            df_bills = ts.get_transactions(window=const.TimeWindow.LIFETIME, exclude_non_retail=True)
         if df_bills.empty:
             logger.warning("⚠️ 資料庫中無交易資料。")
             return
 
-        # 2. 載入規則
-        configs = {
-            'reward_rules': ConfigLoader.load_config(CONFIG_DIR, 'bridge_reward_rules', strategy='replace'),
-            'rewards_base': ConfigLoader.load_config(CONFIG_DIR, 'dim_card_rewards_base', strategy='replace'),
-            'rewards_campaigns': ConfigLoader.load_config(CONFIG_DIR, 'dim_card_rewards_campaigns', strategy='append')
-        }
+        # 2. 載入規則 (從資料庫服務載入)
+
+        configs = cs.get_rewards_configs_table()
 
         # 3. 執行計算
         calculator = RewardsCalculator(configs=configs)

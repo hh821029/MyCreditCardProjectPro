@@ -43,11 +43,12 @@
                     onclick="fetchAnalyzableData()">🔍 取得目前可分析資料</button>
                 <button id="btnAnalysis" onclick="runTask('analytics')" disabled>📊 執行 RFM 分析</button>
                 <button id="btnRewards" onclick="runTask('rewards')" disabled>💰 計算回饋金</button>
+                <button id="btnExport" onclick="runTask('query_export')" disabled style="background: linear-gradient(135deg, #10b981, #059669); border: none;">📥 篩選與匯出 CSV</button>
             </div>
 
             <!-- 可分析資料篩選區 (預設隱藏，待資料取得後顯示) -->
             <div id="filterSection" class="filter-section" style="display: none;">
-                <div class="filter-title">⚙️ 可分析資料篩選設定 (第一階段：展示勾選狀態)</div>
+                <div class="filter-title">⚙️ 可分析資料篩選設定</div>
                 <div class="filter-container">
                     <!-- 銀行卡別卡片 -->
                     <div class="filter-card">
@@ -83,6 +84,51 @@
                             </div>
                         </div>
                         <div id="paymentList" class="filter-list"></div>
+                    </div>
+
+                    <!-- 日期與地點篩選 -->
+                    <div class="filter-card">
+                        <div class="filter-card-header">
+                            <span>📅 日期與地點範圍</span>
+                        </div>
+                        <div class="filter-list" style="max-height: none; overflow-y: visible; gap: 8px;">
+                            <!-- 時間區間 Preset Checkboxes -->
+                            <div style="display: flex; flex-direction: column; gap: 4px;">
+                                <span style="font-size: 11px; color: var(--text-secondary); margin-bottom: 2px;">快速時間篩選 (迄日為今日)</span>
+                                <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 4px;">
+                                    <label class="checkbox-label" style="padding: 2px 4px;">
+                                        <input type="checkbox" name="timePreset" value="LAST_MONTH" onchange="handleTimePresetClick(this)"> 近一個月
+                                    </label>
+                                    <label class="checkbox-label" style="padding: 2px 4px;">
+                                        <input type="checkbox" name="timePreset" value="LAST_QUARTER" onchange="handleTimePresetClick(this)"> 近一季
+                                    </label>
+                                    <label class="checkbox-label" style="padding: 2px 4px;">
+                                        <input type="checkbox" name="timePreset" value="LAST_HALF_YEAR" onchange="handleTimePresetClick(this)"> 近半年
+                                    </label>
+                                    <label class="checkbox-label" style="padding: 2px 4px;">
+                                        <input type="checkbox" name="timePreset" value="LAST_YEAR" onchange="handleTimePresetClick(this)"> 近一年
+                                    </label>
+                                </div>
+                            </div>
+                            <!-- 自訂起迄時間 -->
+                            <div style="display: flex; gap: 8px; margin-top: 4px;">
+                                <div style="display: flex; flex-direction: column; gap: 2px; flex: 1;">
+                                    <span style="font-size: 11px; color: var(--text-secondary);">自訂起日</span>
+                                    <input type="date" id="startDate" style="background-color: var(--card-bg); border: 1px solid var(--btn-border); border-radius: 4px; padding: 4px 6px; color: var(--text-primary); font-family: var(--font-family); font-size: 12px; width: 100%; box-sizing: border-box;">
+                                </div>
+                                <div style="display: flex; flex-direction: column; gap: 2px; flex: 1;">
+                                    <span style="font-size: 11px; color: var(--text-secondary);">自訂迄日</span>
+                                    <input type="date" id="endDate" style="background-color: var(--card-bg); border: 1px solid var(--btn-border); border-radius: 4px; padding: 4px 6px; color: var(--text-primary); font-family: var(--font-family); font-size: 12px; width: 100%; box-sizing: border-box;">
+                                </div>
+                            </div>
+                            <!-- 地點下拉選單 -->
+                            <div style="display: flex; flex-direction: column; gap: 2px; margin-top: 6px;">
+                                <span style="font-size: 11px; color: var(--text-secondary);">地點篩選 (兩碼國家代碼)</span>
+                                <select id="locationSelect" style="background-color: var(--card-bg); border: 1px solid var(--btn-border); border-radius: 4px; padding: 4px 6px; color: var(--text-primary); font-family: var(--font-family); font-size: 12px; width: 100%; cursor: pointer;">
+                                    <option value="">全部地區</option>
+                                </select>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -233,16 +279,29 @@
                         paymentList.innerHTML = '<span style="color: #64748b; font-size: 13px; padding: 6px;">無支付管道資料</span>';
                     }
 
+                    // 4. 渲染地點代碼選單
+                    const locationSelect = document.getElementById('locationSelect');
+                    locationSelect.innerHTML = '<option value="">全部地區</option>';
+                    if (data.locations && data.locations.length > 0) {
+                        data.locations.forEach(loc => {
+                            const opt = document.createElement('option');
+                            opt.value = loc;
+                            opt.textContent = loc;
+                            locationSelect.appendChild(opt);
+                        });
+                    }
+
                     // 顯示篩選區域
                     document.getElementById('filterSection').style.display = 'block';
 
-                    // 啟用分析與回饋按鈕
+                    // 啟用分析、回饋與匯出按鈕
                     document.getElementById('btnAnalysis').disabled = false;
                     document.getElementById('btnRewards').disabled = false;
+                    document.getElementById('btnExport').disabled = false;
 
                     btnFetch.disabled = false;
                     btnFetch.textContent = '🔄 重新取得可分析資料';
-                    appendLog('✅ 成功取得可分析的銀行、卡片及第三方支付清單，已啟用分析與回饋金按鈕。');
+                    appendLog('✅ 成功取得可分析的銀行、卡片、第三方支付及地點清單，已啟用分析、回饋與篩選匯出按鈕。');
                 })
                 .catch(err => {
                     console.error(err);
@@ -251,6 +310,28 @@
                     btnFetch.disabled = false;
                     btnFetch.textContent = '🔍 取得目前可分析資料';
                 });
+        }
+
+        function handleTimePresetClick(clickedCb) {
+            const presets = document.querySelectorAll('input[name="timePreset"]');
+            const startDateInput = document.getElementById('startDate');
+            const endDateInput = document.getElementById('endDate');
+            
+            if (clickedCb.checked) {
+                // 取消勾選其他時間 preset
+                presets.forEach(cb => {
+                    if (cb !== clickedCb) cb.checked = false;
+                });
+                // 禁用自訂日期輸入
+                startDateInput.disabled = true;
+                endDateInput.disabled = true;
+                startDateInput.value = '';
+                endDateInput.value = '';
+            } else {
+                // 啟用自訂日期輸入
+                startDateInput.disabled = false;
+                endDateInput.disabled = false;
+            }
         }
 
         function runTask(type) {
@@ -270,7 +351,29 @@
 
             appendLog(`\n[${new Date().toLocaleTimeString()}] >>>>> 啟動 ${type.toUpperCase()} 任務 <<<<<`);
 
-            const url = `/api/run/${type}`;
+            // 收集核取與輸入篩選條件
+            const checkedBanks = Array.from(document.querySelectorAll('input[name="bank"]:checked')).map(cb => cb.value);
+            const checkedCards = Array.from(document.querySelectorAll('input[name="card"]:checked')).map(cb => cb.value);
+            const checkedPayments = Array.from(document.querySelectorAll('input[name="payment"]:checked')).map(cb => cb.value);
+            
+            const checkedPreset = document.querySelector('input[name="timePreset"]:checked');
+            const timeWindow = checkedPreset ? checkedPreset.value : '';
+            const startDate = document.getElementById('startDate').value;
+            const endDate = document.getElementById('endDate').value;
+            const location = document.getElementById('locationSelect').value;
+
+            const params = new URLSearchParams();
+            if (checkedBanks.length > 0) params.append('banks', checkedBanks.join(','));
+            if (checkedCards.length > 0) params.append('cards', checkedCards.join(','));
+            if (checkedPayments.length > 0) params.append('payments', checkedPayments.join(','));
+            if (timeWindow) params.append('time_window', timeWindow);
+            if (startDate) params.append('start_date', startDate);
+            if (endDate) params.append('end_date', endDate);
+            if (location) params.append('location', location);
+
+            const paramsStr = params.toString();
+            const url = `/api/run/${type}` + (paramsStr ? `?${paramsStr}` : '');
+            
             eventSource = new EventSource(url);
 
             eventSource.onmessage = function (event) {

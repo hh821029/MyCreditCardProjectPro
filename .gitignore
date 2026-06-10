@@ -13,6 +13,7 @@ excel_files/
 # 保留範例檔
 !data/example_*.csv
 !configs/example_merchant_regex_rules.csv
+generate_mock_data.py
 
 # 忽略暫存檔
 ~$*.xlsx
@@ -52,8 +53,11 @@ configs/test_*.csv
 # C# 專案測試檔
 home_page.cs
 home_page.csproj
+Program.cs
+MyCreditCardProjectPro.csproj
 MyCreditCardProjectPro.sln
 obj/
+.vscode/
 
 # 忽略分析結果檔、分析過程產生的中間檔
 refined_all_banks.csv

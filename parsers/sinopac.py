@@ -5,6 +5,8 @@ from typing import List, Dict, Optional, Any
 import const
 from parsers.base import BasePdfParser
 
+
+
 class SinopacBillParser(BasePdfParser):
     def __init__(self):
         super().__init__(bank=const.Bank.SINOPAC)
@@ -15,24 +17,42 @@ class SinopacBillParser(BasePdfParser):
         針對被切成 3 行的交易紀錄進行邏輯合併。
         """
         all_clean_rows = []
+        found_header = False  # 追蹤是否已跨過「消費日」標題列（跨頁面持續）
         
         try:
             with pdfplumber.open(pdf_path) as pdf:
                 for page in pdf.pages:
-                    # 使用 text 策略
+                    # 使用 lines 策略
                     tables = page.extract_tables(table_settings={
-                        "vertical_strategy": "text", 
-                        "horizontal_strategy": "text"
+                        "vertical_strategy": "lines",
+                        "horizontal_strategy": "lines"
                     })
 
                     for table in tables:
                         num_rows = len(table)
-                        
-                        for i in range(num_rows):
+
+                        if not found_header:
+                            # 尚未找到標題列：掃描此 table 找「消費日」
+                            header_idx = None
+                            for hi, hrow in enumerate(table):
+                                if any(cell and '消費日' in cell for cell in hrow):
+                                    header_idx = hi
+                                    break
+                            if header_idx is None:
+                                continue  # 此 table 無標題列，略過（如摘要表）
+                            found_header = True
+                            row_start = header_idx + 1  # 標題列以上全略過
+                            current_amount_col = 6  # 第一頁標題表格：金額在 col_6
+                        else:
+                            row_start = 0  # 第 2 頁以後直接從第一行開始
+                            current_amount_col = 4  # 第 2 頁以後：金額在 col_4
+
+                        for i in range(row_start, num_rows):
                             row = table[i]
                             
                             # 1. 錨點偵測 (呼叫基底類別方法)
-                            if not self._is_date_pattern(row[0]):
+                            # 欄數不足以取得金額欄，視為結構異常直接跳過
+                            if not self._is_date_pattern(row[0]) or len(row) <= current_amount_col:
                                 continue
                                 
                             # 2. 開始組裝 (Reconstruction)
@@ -59,15 +79,19 @@ class SinopacBillParser(BasePdfParser):
                                         if part: desc_parts.append(part)
                                 
                                 # 合併說明
-                                full_description = "".join(desc_parts)
+                                full_description = "".join(desc_parts).replace('\r\n', '').replace('\n', '').replace('\r', '').strip()
 
                                 # 建立資料物件 (使用基底定義的 target_columns)
+                                _card_raw = row[2].strip() if row[2] is not None else ''
+                                _card_match = re.match(r'\d+', _card_raw)
                                 item = {
                                     const.COL_TXN_DATE: row[0],
                                     const.COL_POST_DATE: row[1],
-                                    const.COL_CARD_NO: str(row[2]).replace('(', '').replace(')', ''),
+                                    const.COL_CARD_NO: _card_match.group() if _card_match else _card_raw,
                                     const.COL_MERCHANT: full_description,
-                                    const.COL_PAY_AMOUNT: self._clean_pdf_amount(row[4]), # 呼叫基底類別方法
+                                    const.COL_PAY_AMOUNT: self._clean_pdf_amount(
+                                        row[current_amount_col], strip_prefix='$'  # 永豐帳單金額前綴為 $ (如 $-300)
+                                    ), # 呼叫基底類別方法
                                     const.COL_CONV_DATE: None,
                                     const.COL_CURR_AMOUNT: 0.0
                                 }
@@ -78,7 +102,7 @@ class SinopacBillParser(BasePdfParser):
 
             # 轉成 DataFrame
             df = pd.DataFrame(all_clean_rows, columns=self.target_columns)
-            
+            #df.to_csv(f'{const.OUTPUT_DIR}/sinopac_raw.csv', index=False) # debug
             # 加上銀行名稱標籤
             df[const.COL_BANK_NAME] = self.bank.bank_id
 
@@ -89,13 +113,50 @@ class SinopacBillParser(BasePdfParser):
             df = self._finalize_normalization(df)
             
             df = self._enforce_dtypes(df)
-            
             return df
 
         except Exception as e:
             print(f"Error parsing Sinopac PDF: {e}")
             return pd.DataFrame(columns=self.target_columns)
 
+
 # 用於單獨測試
-if __name__ == "__main__":
-    pass
+#if __name__ == "__main__":
+#    import sys, os, glob
+#    sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+#    def dump_raw_tables(pdf_path: str, out_csv: str):
+#        """將 PDF 所有 table 的原始 row 輸出成 CSV，不做任何過濾。"""
+#        import pdfplumber, csv
+#        rows_out = []
+#        with pdfplumber.open(pdf_path) as pdf:
+#            for p_idx, page in enumerate(pdf.pages):
+#                tables = page.extract_tables(table_settings={
+#                    "vertical_strategy": "lines",
+#                    "horizontal_strategy": "lines"
+#                })
+#                for t_idx, table in enumerate(tables):
+#                    for r_idx, row in enumerate(table):
+#                        rows_out.append({
+#                            'page': p_idx + 1,
+#                            'table': t_idx,
+#                            'row': r_idx,
+#                            **{f'col_{c}': v for c, v in enumerate(row)}
+#                        })
+#        df_raw = pd.DataFrame(rows_out)
+#        df_raw.to_csv(out_csv, index=False, encoding='utf-8')
+#        print(f"[DUMP] 已輸出 {len(df_raw)} 行 → {out_csv}")
+#    pdf_files = (
+#        glob.glob('data/**/*永豐*.pdf', recursive=True) +
+#        glob.glob('data/**/*sinopac*.pdf', recursive=True) +
+#        glob.glob('data/**/*Sinopac*.pdf', recursive=True)
+#    )
+
+#    if not pdf_files:
+#        print("[WARN] 找不到任何永豐 PDF，請確認 data/ 資料夾內的檔名。")
+#    else:
+#        for pdf_path in sorted(pdf_files):
+#            base = os.path.splitext(os.path.basename(pdf_path))[0]
+#            print(f"\n{'='*60}\n[INFO] 處理: {base}\n{'='*60}")
+            # 原始欄位 dump（供結構檢視）
+#            dump_raw_tables(pdf_path, f'output/{base}_raw_dump.csv')

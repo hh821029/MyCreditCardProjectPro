@@ -47,7 +47,7 @@
 - [ ] 驗證設定：確保 `configs/` 內的規則檔在分離後仍能被正確讀取。
 - [ ] 流程測試：執行 `main.py` 確保 `refiner` 邏輯運作正常且未被破壞。
 - [ ] 排除敏感資訊：確保 `data/` 或 `output/` 目錄下的個人帳單資訊未被列入 stage。
-    - 注意：`configs/` 目錄下包含個人資料的檔案（如 `dim_cards.csv`）應已被 `.gitignore` 排除，請再次確認。
+    - 注意：`configs/` 目錄下包含個人資料的檔案（如 `dim_cards.csv`）應已被 `.gitignore`和`.dockerignore` 排除，請再次確認。
 
 ## 6. 待辦與待改善項目 (Backlog)
 - [ ] 整理日後待更新的解析器 (Parsers) 清單。

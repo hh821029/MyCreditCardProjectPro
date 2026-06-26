@@ -81,6 +81,9 @@ class TransactionColumn(Enum):
     MERCHANT_RATE = ('merchant_rate', 'float', None, 'merchant_rate')
     REWARD_CAL_BREAK = ('reward_cal_break', 'bool', None, 'reward_cal_break')
     CONDITION = ('condition', 'str', 255, 'condition')
+    MIN_SINGLE_TRANSACTION = ('min_single_transaction', 'float', None, 'min_single_transaction')
+    CUMULATIVE_SPEND_THRESHOLD = ('cumulative_spend_threshold', 'float', None, 'cumulative_spend_threshold')
+
 
     # 維度表與控制輔助欄位
     PRIORITY = ('priority', 'int', None, 'priority')
@@ -243,12 +246,34 @@ class Currency(Enum):
         except (ValueError, TypeError):
             return value
 
+class CardNetwork(Enum):
+    VISA = 'VISA'
+    MASTERCARD = 'MASTERCARD'
+    JCB = 'JCB'
+    AMEX = 'AMEX'
+    UNIONPAY = 'UNIONPAY'
+    DISCOVER = 'DISCOVER'
+    OTHER = 'OTHER'
+
+    @property
+    def label(self):
+        return self.value
+
+class SmartCardType(Enum):
+    EASY_CARD = 'EasyCard'
+    I_PASS = 'iPASS'
+    ICASH = 'icash'
+    
+
 class Bank(Enum):
     ESUN = ('esun','808',['玉山','esun'])
     CATHAY = ('cube','013',['國泰','國泰世華','cathay','cube','CUBE'])
-    CTBC = ('ctbc','822',['中信','中國信託','ctbc'])
+    CTBC = ('ctbc','822',['中信','中國信託','ctbc','中國信託商業銀行'])
     HNCB = ('hncb','008',['華南','hncb'])
     SINOPAC = ('sinopac','807',['永豐','DAWHO','DAWAY','sinopac'])
+    TAISHIN = ('taishin','812',['台新','taishin','RICHART'])
+    FUBON = ('fubon','012',['富邦','fubon','台北富邦','北富銀'])
+    FCBK = ('fcbk','007',['第一','第一銀行','fcbk','FCBK','firstbank'])
 
     @property
     def bank_id(self):
@@ -511,10 +536,11 @@ ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
 DATA_DIR = os.path.join(ROOT_DIR, 'data')          # 輸入區
 OUTPUT_DIR = os.path.join(ROOT_DIR, 'output')      # 輸出區
 CONFIG_DIR = os.path.join(ROOT_DIR, 'configs')     # 規則設定檔區
+DATABASE_DIR = os.path.join(ROOT_DIR, 'database')   # 資料庫區
 
 # 資料庫路徑 (雙資料庫獨立設計)
-TRANSACTIONS_DB_PATH = os.path.join(OUTPUT_DIR, 'TransactionsBills.db')
-CONFIGS_DB_PATH = os.path.join(OUTPUT_DIR, 'TransactionsConfigs.db')
+TRANSACTIONS_DB_PATH = os.path.join(DATABASE_DIR, 'TransactionsBills.db')
+CONFIGS_DB_PATH = os.path.join(DATABASE_DIR, 'TransactionsConfigs.db')
 ANALYSIS_DB_PATH = os.path.join(OUTPUT_DIR, 'TransactionsAnalysis.db')
 
 # 向後相容別名：指向主要交易資料庫，避免專案其他地方崩潰

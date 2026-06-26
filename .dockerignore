@@ -7,6 +7,7 @@ docs/
 *.md
 .vscode
 !README.md
+issues/
 
 # 3. 保護機密資訊與本地端的 SQLite 資料庫
 .venv
@@ -20,6 +21,7 @@ input/
 output/
 data/
 excel_files/
+database/
 
 # 5. 忽略試算表檔案
 *.xlsx

@@ -9,6 +9,7 @@ __pycache__/
 my_first_server/
 server.py
 excel_files/
+.vscode/
 
 # 保留範例檔
 !data/example_*.csv
@@ -44,20 +45,14 @@ processors/*_set.py
 analytics/*_set.py
 web/*_private.html
 dim_ec_platform.csv
+database/
+issues/*
 
 # 忽略測試檔
 *_demo.py
 temp_*.py
 configs/test_*.csv
-
-# C# 專案測試檔
-home_page.cs
-home_page.csproj
-Program.cs
-MyCreditCardProjectPro.csproj
-MyCreditCardProjectPro.sln
-obj/
-.vscode/
+pdf_picture_debug.py
 
 # 忽略分析結果檔、分析過程產生的中間檔
 refined_all_banks.csv

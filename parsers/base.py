@@ -300,12 +300,24 @@ class BasePdfParser(BaseBillParser):
         if not value: return False
         return bool(re.match(pattern, str(value).strip()))
 
-    def _clean_pdf_amount(self, value: Any) -> float:
-        """PDF 金額清洗 (支援括號與負號)"""
+    def _clean_pdf_amount(self, value: Any, strip_prefix: str = '') -> float:
+        """PDF 金額清洗 (支援括號、後綴負號、前綴負號含全形)
+        
+        Args:
+            value: 原始金額字串或數值。
+            strip_prefix: 可選，清洗前先剝除的前綴字元（如永豐的 '$'）。
+        """
         if value is None: return 0.0
-        val_str = str(value).strip().replace(',', '')
+        # 全形負號 `－` 正規化為半形 `-`
+        val_str = str(value).strip().replace(',', '').replace('－', '-')
+        if strip_prefix and val_str.startswith(strip_prefix):  # 剝除呼叫方指定的前綴
+            val_str = val_str[len(strip_prefix):].strip()
         if not val_str or val_str.lower() == 'nan': return 0.0
-        is_negative = (val_str.startswith('(') and val_str.endswith(')')) or val_str.endswith('-')
+        is_negative = (
+            (val_str.startswith('(') and val_str.endswith(')')) or  # (25)
+            val_str.endswith('-') or                                  # 25-
+            val_str.startswith('-')                                   # -25 或 －25（已轉半形）
+        )
         clean_num = re.sub(r'[^\d.]', '', val_str)
         try:
             f_val = float(clean_num) if clean_num else 0.0

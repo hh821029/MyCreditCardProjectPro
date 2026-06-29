@@ -1,9 +1,13 @@
 ## 📅 開發日記 (Dev Log)
 
+* **2026-06-29**
+   * 修復永豐PDF資料抓取錯誤。
+   * 新增rfm服務前端頁面，並移動原本index.html的rfm相關功能到新的html。
+
 * **2026-06-06**
    * 資料提取更新：將原本設定檔的pandas讀表模式，更新為SQL提取模式。
    * 前端首頁更新：更新核取方塊作為條件篩選。
-   * 新增開發設計文件：撰寫關於零消費（空資料表）在信用卡行為分析中的商業價值與設計規範 (`docs/zero_transaction_analysis_significance.md`)。
+
 
 * **2026-05-30**
     * `services/analysis_service.py` 更新：Matrix 產生模組改為使用 `const.TimeWindow` 枚舉，取代硬編碼的字典陣列。

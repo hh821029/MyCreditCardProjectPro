@@ -266,14 +266,14 @@ class SmartCardType(Enum):
     
 
 class Bank(Enum):
-    ESUN = ('esun','808',['玉山','esun'])
-    CATHAY = ('cube','013',['國泰','國泰世華','cathay','cube','CUBE'])
-    CTBC = ('ctbc','822',['中信','中國信託','ctbc','中國信託商業銀行'])
-    HNCB = ('hncb','008',['華南','hncb'])
-    SINOPAC = ('sinopac','807',['永豐','DAWHO','DAWAY','sinopac'])
-    TAISHIN = ('taishin','812',['台新','taishin','RICHART'])
-    FUBON = ('fubon','012',['富邦','fubon','台北富邦','北富銀'])
-    FCBK = ('fcbk','007',['第一','第一銀行','fcbk','FCBK','firstbank'])
+    ESUN = ('esun','808','玉山',['玉山','esun'])
+    CATHAY = ('cube','013','國泰',['國泰','國泰世華','cathay','cube','CUBE'])
+    CTBC = ('ctbc','822','中信',['中信','中國信託','ctbc','中國信託商業銀行'])
+    HNCB = ('hncb','008','華南',['華南','hncb'])
+    SINOPAC = ('sinopac','807','永豐',['永豐','DAWHO','DAWAY','sinopac'])
+    TAISHIN = ('taishin','812','台新',['台新','taishin','RICHART'])
+    FUBON = ('fubon','012','富邦',['富邦','fubon','台北富邦','北富銀'])
+    FCBK = ('fcbk','007','第一',['第一','第一銀行','fcbk','FCBK','firstbank'])
 
     @property
     def bank_id(self):
@@ -284,8 +284,12 @@ class Bank(Enum):
         return self.value[1]
 
     @property
-    def bank_keywords_mapping(self):
+    def bank_display_name(self):
         return self.value[2]
+
+    @property
+    def bank_keywords_mapping(self):
+        return self.value[3]
 
     @classmethod
     def from_keyword(cls, text):

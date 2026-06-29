@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MyCreditCardProjectPro 控制台 - 主頁</title>
+    <title>MyCreditCardProjectPro 控制台 - RFM分析</title>
     <!-- 引入高品質字型 Outfit -->
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <!-- 引入通用外部樣式表 -->
@@ -13,44 +13,34 @@
 
 <body>
     <div class="container">
-        <h1>📊 MyCreditCardProjectPro 控制台</h1>
+        <h1>📊 MyCreditCardProjectPro RFM 行為特徵分析</h1>
 
-        <!-- 簡單的導覽超連結 -->
+        <!-- 導覽超連結 -->
         <div class="nav-bar">
-            <span class="active">🏠 主控制台</span> |
+            <a href="index.html">🏠 主控制台</a> |
             <a href="sync_config.html">⚙️ 設定同步面板</a> |
-            <a href="rfm_service.html">📊 RFM分析</a>
+            <span class="active">📊 RFM分析</span>
         </div>
 
-        <!-- 區塊一：帳單資料載入與處理 (ETL) -->
+        <!-- 區塊：RFM分析 按鈕與篩選區-->
         <div class="section-box">
-            <div class="section-title">📦 帳單資料處理 (ETL 流程)</div>
-            <p style="margin: 0 0 15px 0; font-size: 13px; color: var(--text-secondary);">載入原始信用卡帳單資料並寫入 SQLite 資料庫主表。
+            <div class="section-title">📊 執行 RFM 分析與消費矩陣</div>
+            <p style="margin: 0 0 15px 0; font-size: 13px; color: var(--text-secondary);">
+                藉由篩選不同的時間範圍、發卡銀行、卡片種類、第三方支付、消費類別或消費地點，執行細粒度的 RFM 客戶行為分析，並產生消費矩陣報表至 <code>output/matrix/</code> 目錄。
             </p>
-            <div class="button-group">
-                <button id="btnEtl" class="btn-primary" onclick="runTask('etl')">🚀 執行 ETL 流程</button>
+            <div class="button-group" style="margin-bottom: 20px;">
+                <button id="btnAnalysis" class="btn-primary"
+                    style="background: linear-gradient(135deg, #ec4899, #8b5cf6); border: none;"
+                    onclick="runTask('analytics')">📊 執行 RFM 分析</button>
+                <button id="btnSync" class="btn-secondary" onclick="syncConfig()">⚙️ 同步最新設定</button>
                 <button id="btnClear" class="btn-secondary" onclick="clearConsole()">🧹 清空控制台</button>
             </div>
-        </div>
 
-        <!-- 區塊二：數據分析與回饋計算 -->
-        <div class="section-box">
-            <div class="section-title">📊 數據分析與回饋計算</div>
-            <p style="margin: 0 0 15px 0; font-size: 13px; color: var(--text-secondary);">呼叫回饋引擎計算各筆交易的現金/紅利回饋，或依條件篩選匯出交易明細。</p>
-
-            <div class="button-group" style="margin-bottom: 20px;">
-                <button id="btnFetch" class="btn-primary" style="background: linear-gradient(135deg, #ec4899, #8b5cf6);"
-                    onclick="fetchAnalyzableData()">🔍 取得目前可分析資料</button>
-                <button id="btnRewards" onclick="runTask('rewards')" disabled>💰 計算回饋金</button>
-                <button id="btnExport" onclick="runTask('query_export')" disabled
-                    style="background: linear-gradient(135deg, #10b981, #059669); border: none;">📥 篩選與匯出 CSV</button>
-            </div>
-
-            <!-- 可分析資料篩選區 (預設隱藏，待資料取得後顯示) -->
-            <div id="filterSection" class="filter-section" style="display: none;">
-                <div class="filter-title">⚙️ 可分析資料篩選設定</div>
+            <!-- 可分析資料篩選區 (無摩擦自動展示) -->
+            <div class="filter-section">
+                <div class="filter-title">⚙️ 篩選分析設定</div>
                 <div class="filter-container">
-                    <!-- 銀行卡別卡片 -->
+                    <!-- 銀行名稱 -->
                     <div class="filter-card">
                         <div class="filter-card-header">
                             <span>🏦 銀行名稱</span>
@@ -59,7 +49,9 @@
                                 <span class="filter-link" onclick="toggleAll('bank', false)">清除</span>
                             </div>
                         </div>
-                        <div id="bankList" class="filter-list"></div>
+                        <div id="bankList" class="filter-list">
+                            <span style="color: #64748b; font-size: 13px; padding: 6px;">正在讀取銀行...</span>
+                        </div>
                     </div>
 
                     <!-- 信用卡名稱 -->
@@ -71,7 +63,9 @@
                                 <span class="filter-link" onclick="toggleAll('card', false)">清除</span>
                             </div>
                         </div>
-                        <div id="cardList" class="filter-list"></div>
+                        <div id="cardList" class="filter-list">
+                            <span style="color: #64748b; font-size: 13px; padding: 6px;">正在讀取卡片...</span>
+                        </div>
                     </div>
 
                     <!-- 第三方支付 -->
@@ -83,7 +77,36 @@
                                 <span class="filter-link" onclick="toggleAll('payment', false)">清除</span>
                             </div>
                         </div>
-                        <div id="paymentList" class="filter-list"></div>
+                        <div id="paymentList" class="filter-list">
+                            <span style="color: #64748b; font-size: 13px; padding: 6px;">正在讀取支付...</span>
+                        </div>
+                    </div>
+
+                    <!-- 消費類別 -->
+                    <div class="filter-card">
+                        <div class="filter-card-header">
+                            <span>🏷️ 消費類別</span>
+                            <div class="filter-actions">
+                                <span class="filter-link" onclick="toggleAll('category', true)">全選</span>
+                                <span class="filter-link" onclick="toggleAll('category', false)">清除</span>
+                            </div>
+                        </div>
+                        <div id="categoryList" class="filter-list">
+                            <span style="color: #64748b; font-size: 13px; padding: 6px;">正在讀取類別...</span>
+                        </div>
+                    </div>
+
+                    <div class="filter-card">
+                        <div class="filter-card-header">
+                            <span>🏷️ 消費次類別</span>
+                            <div class="filter-actions">
+                                <span class="filter-link" onclick="toggleAll('sub_category', true)">全選</span>
+                                <span class="filter-link" onclick="toggleAll('sub_category', false)">清除</span>
+                            </div>
+                        </div>
+                        <div id="sub_categoryList" class="filter-list">
+                            <span style="color: #64748b; font-size: 13px; padding: 6px;">正在讀取次類別...</span>
+                        </div>
                     </div>
 
                     <!-- 日期與地點篩選 -->
@@ -95,7 +118,7 @@
                             <!-- 時間區間 Preset Checkboxes -->
                             <div style="display: flex; flex-direction: column; gap: 4px;">
                                 <span style="font-size: 11px; color: var(--text-secondary); margin-bottom: 2px;">快速時間篩選
-                                    (迄日為今日)</span>
+                                    (迄日為最新交易日)</span>
                                 <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 4px;">
                                     <label class="checkbox-label" style="padding: 2px 4px;">
                                         <input type="checkbox" name="timePreset" value="LAST_MONTH"
@@ -151,7 +174,12 @@
 
     <script>
         let eventSource = null;
-        let isFirstAnalyzableFetch = true;
+        let categorySubMap = {};
+
+        // 頁面載入後，自動非同步抓取可分析資料以填入篩選器
+        window.onload = function () {
+            fetchAnalyzableData(true);
+        };
 
         function appendLog(message) {
             const consoleDiv = document.getElementById('console');
@@ -180,70 +208,25 @@
         function toggleAll(name, checked) {
             const checkboxes = document.querySelectorAll(`input[name="${name}"]`);
             checkboxes.forEach(cb => cb.checked = checked);
+            if (name === 'category') {
+                renderSubCategories();
+            }
         }
 
-        function fetchAnalyzableData() {
-            const btnFetch = document.getElementById('btnFetch');
-
-            // 首次點擊：自動觸發所有設定同步 (config_all)
-            if (isFirstAnalyzableFetch) {
-                btnFetch.disabled = true;
-                btnFetch.textContent = '⚙️ 正在同步設定檔...';
-                appendLog(`\n[${new Date().toLocaleTimeString()}] >>>>> 首次讀取，自動啟動設定同步流程 <<<<<`);
-
-                const allButtons = document.querySelectorAll('button');
-                const statusDiv = document.getElementById('status');
-
-                // 鎖定所有按鈕
-                allButtons.forEach(btn => btn.disabled = true);
-                statusDiv.textContent = `目前狀態：首次讀取，正在執行 [所有設定同步] 中...`;
-                statusDiv.className = "status-box status-busy";
-
-                if (eventSource) {
-                    eventSource.close();
-                }
-
-                eventSource = new EventSource('/api/run/config_all');
-
-                eventSource.onmessage = function (event) {
-                    appendLog(event.data);
-                };
-
-                eventSource.onerror = function (err) {
-                    console.log("SSE Stream ended.");
-                    eventSource.close();
-                    eventSource = null;
-
-                    isFirstAnalyzableFetch = false; // 標記為已同步
-
-                    // 解鎖所有按鈕
-                    allButtons.forEach(btn => btn.disabled = false);
-                    statusDiv.textContent = `目前狀態：設定同步完成 (閒置中)`;
-                    statusDiv.className = "status-box";
-                    appendLog(`[${new Date().toLocaleTimeString()}] <<<<< 設定同步完成，開始取得可分析資料 <<<<<`);
-
-                    // 連動呼叫真正讀取資料
-                    fetchAnalyzableData();
-                };
-                return;
+        function fetchAnalyzableData(isInitial = false) {
+            if (isInitial) {
+                appendLog(`[${new Date().toLocaleTimeString()}] 🚀 正在自動載入可分析的維度資料...`);
+            } else {
+                appendLog(`[${new Date().toLocaleTimeString()}] 🔄 正在重新讀取可分析資料...`);
             }
-
-            // 正常加載可分析資料 API 流程
-            btnFetch.disabled = true;
-            btnFetch.textContent = '🔍 正在取得可分析資料...';
-
-            appendLog(`\n[${new Date().toLocaleTimeString()}] >>>>> 啟動讀取可分析資料 API <<<<<`);
-
             fetch('/api/analyzable-data')
                 .then(res => res.json())
                 .then(data => {
                     if (data.error) {
-                        appendLog(`❌ 取得資料失敗: ${data.error}`);
-                        alert(`取得資料失敗: ${data.error}`);
-                        btnFetch.disabled = false;
-                        btnFetch.textContent = '🔍 取得目前可分析資料';
+                        appendLog(`❌ 取得可分析資料失敗: ${data.error}`);
                         return;
                     }
+                    categorySubMap = data.category_sub_map || {};
 
                     // 1. 渲染銀行名稱
                     const bankList = document.getElementById('bankList');
@@ -256,7 +239,7 @@
                             bankList.appendChild(label);
                         });
                     } else {
-                        bankList.innerHTML = '<span style="color: #64748b; font-size: 13px; padding: 6px;">無銀行資料</span>';
+                        bankList.innerHTML = '<span style="color: #64748b; font-size: 13px; padding: 6px;">無銀行資料 (請先同步設定或執行 ETL)</span>';
                     }
 
                     // 2. 渲染卡片名稱
@@ -287,7 +270,24 @@
                         paymentList.innerHTML = '<span style="color: #64748b; font-size: 13px; padding: 6px;">無支付管道資料</span>';
                     }
 
-                    // 4. 渲染地點代碼選單
+                    // 4. 渲染消費類別
+                    const categoryList = document.getElementById('categoryList');
+                    categoryList.innerHTML = '';
+                    if (data.categories && data.categories.length > 0) {
+                        data.categories.forEach(cat => {
+                            const label = document.createElement('label');
+                            label.className = 'checkbox-label';
+                            label.innerHTML = `<input type="checkbox" name="category" value="${cat}" checked onchange="renderSubCategories()"> ${cat}`;
+                            categoryList.appendChild(label);
+                        });
+                    } else {
+                        categoryList.innerHTML = '<span style="color: #64748b; font-size: 13px; padding: 6px;">無類別資料 (預設使用全類別)</span>';
+                    }
+
+                    // 4.5 渲染消費次類別
+                    renderSubCategories();
+
+                    // 5. 渲染地點代碼選單
                     const locationSelect = document.getElementById('locationSelect');
                     locationSelect.innerHTML = '<option value="">全部地區</option>';
                     if (data.locations && data.locations.length > 0) {
@@ -299,24 +299,48 @@
                         });
                     }
 
-                    // 顯示篩選區域
-                    document.getElementById('filterSection').style.display = 'block';
-
-                    // 啟用回饋與匯出按鈕
-                    document.getElementById('btnRewards').disabled = false;
-                    document.getElementById('btnExport').disabled = false;
-
-                    btnFetch.disabled = false;
-                    btnFetch.textContent = '🔄 重新取得可分析資料';
-                    appendLog('✅ 成功取得可分析的銀行、卡片、第三方支付及地點清單，已啟用分析、回饋與篩選匯出按鈕。');
-                })
-                .catch(err => {
-                    console.error(err);
-                    appendLog(`❌ 連線失敗，無法取得可分析資料`);
-                    alert('連線失敗，請確認 API 伺服器是否正常運行。');
-                    btnFetch.disabled = false;
-                    btnFetch.textContent = '🔍 取得目前可分析資料';
                 });
+        }
+
+        function renderSubCategories() {
+            const subCategoryList = document.getElementById('sub_categoryList');
+            if (!subCategoryList) return;
+            subCategoryList.innerHTML = '';
+
+            // 1. 找出所有已勾選的主分類
+            const checkedCats = Array.from(document.querySelectorAll('input[name="category"]:checked')).map(cb => cb.value);
+
+            if (checkedCats.length === 0) {
+                subCategoryList.innerHTML = '<span style="color: #64748b; font-size: 13px; padding: 6px;">請先勾選消費主分類</span>';
+                return;
+            }
+
+            // 2. 蒐集這些主分類對應的次分類
+            let subCats = [];
+            checkedCats.forEach(cat => {
+                const list = categorySubMap[cat];
+                if (list) {
+                    list.forEach(sub => {
+                        if (!subCats.includes(sub)) {
+                            subCats.push(sub);
+                        }
+                    });
+                }
+            });
+
+            subCats.sort();
+
+            // 3. 渲染次分類 Checkbox
+            if (subCats.length > 0) {
+                subCats.forEach(sub => {
+                    const label = document.createElement('label');
+                    label.className = 'checkbox-label';
+                    label.innerHTML = `<input type="checkbox" name="sub_category" value="${sub}" checked> ${sub}`;
+                    subCategoryList.appendChild(label);
+                });
+            } else {
+                subCategoryList.innerHTML = '<span style="color: #64748b; font-size: 13px; padding: 6px;">所選主分類無對應的次分類</span>';
+            }
         }
 
         function handleTimePresetClick(clickedCb) {
@@ -362,6 +386,8 @@
             const checkedBanks = Array.from(document.querySelectorAll('input[name="bank"]:checked')).map(cb => cb.value);
             const checkedCards = Array.from(document.querySelectorAll('input[name="card"]:checked')).map(cb => cb.value);
             const checkedPayments = Array.from(document.querySelectorAll('input[name="payment"]:checked')).map(cb => cb.value);
+            const checkedCategories = Array.from(document.querySelectorAll('input[name="category"]:checked')).map(cb => cb.value);
+            const checkedSubCategories = Array.from(document.querySelectorAll('input[name="sub_category"]:checked')).map(cb => cb.value);
 
             const checkedPreset = document.querySelector('input[name="timePreset"]:checked');
             const timeWindow = checkedPreset ? checkedPreset.value : '';
@@ -373,6 +399,8 @@
             if (checkedBanks.length > 0) params.append('banks', checkedBanks.join(','));
             if (checkedCards.length > 0) params.append('cards', checkedCards.join(','));
             if (checkedPayments.length > 0) params.append('payments', checkedPayments.join(','));
+            if (checkedCategories.length > 0) params.append('categories', checkedCategories.join(','));
+            if (checkedSubCategories.length > 0) params.append('sub_categories', checkedSubCategories.join(','));
             if (timeWindow) params.append('time_window', timeWindow);
             if (startDate) params.append('start_date', startDate);
             if (endDate) params.append('end_date', endDate);
@@ -398,6 +426,45 @@
                 statusDiv.textContent = `目前狀態：[${type.toUpperCase()}] 任務執行結束 (閒置中)`;
                 statusDiv.className = "status-box";
                 appendLog(`[${new Date().toLocaleTimeString()}] <<<<< ${type.toUpperCase()} 任務完成 >>>>>\n`);
+            };
+        }
+
+        function syncConfig() {
+            if (eventSource) {
+                eventSource.close();
+            }
+
+            const allButtons = document.querySelectorAll('button');
+            const statusDiv = document.getElementById('status');
+            const btnSync = document.getElementById('btnSync');
+
+            allButtons.forEach(btn => btn.disabled = true);
+            btnSync.textContent = '⚙️ 正在同步設定檔...';
+            statusDiv.textContent = `目前狀態：正在同步規則設定檔中...`;
+            statusDiv.className = "status-box status-busy";
+
+            appendLog(`\n[${new Date().toLocaleTimeString()}] >>>>> 啟動設定檔同步流程 <<<<<`);
+
+            eventSource = new EventSource('/api/run/config_all');
+
+            eventSource.onmessage = function (event) {
+                appendLog(event.data);
+            };
+
+            eventSource.onerror = function (err) {
+                console.log("SSE Stream ended.");
+                eventSource.close();
+                eventSource = null;
+
+                // 恢復按鈕狀態
+                allButtons.forEach(btn => btn.disabled = false);
+                btnSync.textContent = '⚙️ 同步最新設定';
+                statusDiv.textContent = `目前狀態：設定同步完成 (閒置中)`;
+                statusDiv.className = "status-box";
+                appendLog(`[${new Date().toLocaleTimeString()}] <<<<< 設定同步完成 <<<<<`);
+
+                // 同步完成後自動重新載入篩選器資料
+                fetchAnalyzableData(false);
             };
         }
     </script>

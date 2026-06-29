@@ -7,7 +7,7 @@ import time
 # 引入核心配置與服務層
 import const
 from services.etl_service import run_etl_pipeline
-from services.analysis_service import run_analytics
+from services.rfm_service import run_analytics
 from services.rewards_service import run_rewards_calculation
 
 # ==========================================

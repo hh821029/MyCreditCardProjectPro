@@ -1,3 +1,4 @@
+import os
 import logging
 from loaders.sync_configs_to_db import ConfigSyncManager
 import const
@@ -148,7 +149,7 @@ def get_rewards_configs_table(
 def get_analyzable_data() -> dict:
     """
     從 TransactionsConfigs.db 中取得：
-    1. 不重複的銀行名 (來自 dim_cards.bank_name)
+    1. 不重複的銀行名 (來自 const.Bank)
     2. 不重複的卡片名 (來自 dim_cards.card_type)
     3. 不重複的第三方支付 (來自 dim_payment_process.payment_process，取 priority < 25)
     """
@@ -159,20 +160,22 @@ def get_analyzable_data() -> dict:
         "banks": [],
         "cards": [],
         "payment_processes": [],
-        "locations": []
+        "locations": [],
+        "categories": [],
+        "sub_categories": [],
+        "category_sub_map": {}
     }
     
     try:
         with sqlite3.connect(db_path) as conn:
             cursor = conn.cursor()
             
-            # 1. 取得不重複的銀行名
+            # 1. 取得不重複的銀行名 (改由 const.Bank 載入)
             try:
-                cursor.execute("SELECT DISTINCT bank_name FROM dim_cards WHERE bank_name IS NOT NULL AND bank_name != ''")
-                result["banks"] = [row[0] for row in cursor.fetchall()]
-                logger.info(f"🔍 讀取銀行名成功，共 {len(result['banks'])} 筆")
+                result["banks"] = [{"id": bank.bank_id, "name": bank.bank_display_name} for bank in const.Bank]
+                logger.info(f"🔍 讀取銀行名成功 (from const.Bank)，共 {len(result['banks'])} 筆")
             except Exception as e:
-                logger.warning(f"⚠️ 無法從 dim_cards 讀取 bank_name: {e}")
+                logger.warning(f"⚠️ 無法從 const.Bank 讀取 bank_name: {e}")
                 
             # 2. 取得不重複的卡片名
             try:
@@ -196,6 +199,51 @@ def get_analyzable_data() -> dict:
                 logger.info(f"🔍 讀取國家代碼成功，共 {len(result['locations'])} 筆")
             except Exception as e:
                 logger.warning(f"⚠️ 無法從 const.Location 讀取 locations: {e}")
+                
+            # 5. 取得消費類別 (從 dim_merchants.csv)
+            try:
+                merchants_path = os.path.join(const.CONFIG_DIR, 'dim_merchants.csv')
+                if os.path.exists(merchants_path):
+                    m_df = pd.read_csv(merchants_path, dtype=str)
+                    if 'category' in m_df.columns:
+                        cats = m_df['category'].dropna().unique().tolist()
+                        result["categories"] = sorted([c.strip() for c in cats if c.strip()])
+                logger.info(f"🔍 讀取消費類別成功，共 {len(result['categories'])} 筆")
+            except Exception as e:
+                logger.warning(f"⚠️ 無法從 dim_merchants.csv 讀取 categories: {e}")
+                
+            # 6. 建立消費主類別與次類別的對應關係與次分類清單 (從 dim_merchants.csv)
+            try:
+                merchants_path = os.path.join(const.CONFIG_DIR, 'dim_merchants.csv')
+                if os.path.exists(merchants_path):
+                    m_df = pd.read_csv(merchants_path, dtype=str)
+                    if 'category' in m_df.columns and 'sub_category' in m_df.columns:
+                        # 清洗並過濾空值
+                        m_df['category'] = m_df['category'].astype(str).str.strip()
+                        m_df['sub_category'] = m_df['sub_category'].astype(str).str.strip()
+                        
+                        valid_df = m_df[
+                            m_df['category'].notna() & (m_df['category'] != '') & (m_df['category'] != 'nan') &
+                            m_df['sub_category'].notna() & (m_df['sub_category'] != '') & (m_df['sub_category'] != 'nan')
+                        ]
+                        
+                        # 建立對照 Map
+                        cat_sub_map = {}
+                        for _, row in valid_df.iterrows():
+                            cat = row['category']
+                            sub_cat = row['sub_category']
+                            if cat not in cat_sub_map:
+                                cat_sub_map[cat] = set()
+                            cat_sub_map[cat].add(sub_cat)
+                        
+                        result["category_sub_map"] = {k: sorted(list(v)) for k, v in cat_sub_map.items()}
+                        
+                        # 取得所有不重複的次分類
+                        all_sub_cats = valid_df['sub_category'].unique().tolist()
+                        result["sub_categories"] = sorted(all_sub_cats)
+                logger.info(f"🔍 讀取消費主次分類對應關係成功，共 {len(result['category_sub_map'])} 組主分類，共 {len(result['sub_categories'])} 個次分類")
+            except Exception as e:
+                logger.warning(f"⚠️ 無法從 dim_merchants.csv 讀取主次分類對應關係: {e}")
                 
     except Exception as e:
         logger.error(f"❌ 讀取可分析資料失敗: {e}", exc_info=True)

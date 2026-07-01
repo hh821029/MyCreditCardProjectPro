@@ -25,12 +25,14 @@ def run_rewards_calculation(
     time_window: Optional[str] = None,
     start_date: Optional[str] = None,
     end_date: Optional[str] = None,
-    location: Optional[str] = None
+    location: Optional[str] = None,
+    enable_billing_validation: bool = False,
+    limit_by_card_start: bool = False
 ):
     """執行回饋計算並產出 Demo 結果"""
     try:
         # 1. 執行 SQL 提取 (直接更名與轉型)
-        if any([banks, cards, payments, time_window, start_date, end_date, location]):
+        if limit_by_card_start or any([banks, cards, payments, time_window, start_date, end_date, location]):
             logger.info("⚙️ 偵測到篩選參數，將採用動態 SQL 篩選交易資料進行回饋金計算...")
             df_bills = ts.query_transactions_modular(
                 banks=banks,
@@ -40,7 +42,8 @@ def run_rewards_calculation(
                 start_date=start_date,
                 end_date=end_date,
                 location=location,
-                exclude_non_retail=True
+                exclude_non_retail=True,
+                limit_by_card_start=limit_by_card_start
             )
         else:
             df_bills = ts.get_transactions(window=const.TimeWindow.LIFETIME, exclude_non_retail=True)
@@ -50,11 +53,21 @@ def run_rewards_calculation(
 
         # 2. 載入規則 (從資料庫服務載入)
 
-        configs = cs.get_rewards_configs_table()
+        configs = cs.get_rewards_configs_table(
+            banks=banks,
+            cards=cards,
+            payments=payments,
+            time_window=time_window,
+            start_date=start_date,
+            end_date=end_date,
+            location=location,
+            enable_billing_validation=enable_billing_validation,
+            limit_by_card_start=limit_by_card_start
+        )
 
         # 3. 執行計算
         calculator = RewardsCalculator(configs=configs)
-        df_result = calculator.process(df_bills)
+        df_result = calculator.process(df_bills, enable_billing_validation=enable_billing_validation)
         
         # 4. 寫入分析資料庫
         with sqlite3.connect(ANALYSIS_DB_PATH) as conn:

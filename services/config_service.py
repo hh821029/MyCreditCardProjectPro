@@ -50,100 +50,156 @@ def run_config_fx_table_sync():
     sync_manager.sync_dim_fx_table()
 
 def get_rewards_configs_table(
-    window: Optional[const.TimeWindow] = None,
-    exclude_non_retail: bool = False,
-    anchor_date: Optional[str] = None,
+    banks: Optional[list[str]] = None,
+    cards: Optional[list[str]] = None,
+    payments: Optional[list[str]] = None,
+    time_window: Optional[str] = None,
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+    location: Optional[str] = None,
+    enable_billing_validation: bool = True,
+    limit_by_card_start: bool = False
 ) -> dict:
     """
-    從 TransactionsConfigs.db 提取回饋配置 (服務化提取)
-    """    
-    db_path = const.CONFIGS_DB_PATH
-    logger.info(f"Connecting to: {db_path}")
+    從多個 RewardsConfigs_{bank}.db 提取回饋配置，並將其合併為單一配置字典返回 (向下相容)
+    """
+    # 若無指定銀行，預設載入所有已配置的銀行資料庫
+    if not banks:
+        banks = list(const.BANK_REWARDS_DB_MAP.keys())
     
-    configs = {}
-    try:
-        with sqlite3.connect(db_path) as conn:
-            # 1. 讀取 bridge_reward_rules
-            df_rules = pd.read_sql_query("SELECT * FROM bridge_reward_rules", conn)
-            logger.info("Successfully loaded bridge_reward_rules table.")
+    logger.info(f"🔑 開始從分庫載入回饋配置，銀行清單: {banks}")
+    
+    # 宣告暫存清單，用來收集各分庫的 dataframe
+    rules_list = []
+    base_list = []
+    camp_list = []
+    cards_list = []
+    cube_list = []
+    unicard_list = []
+    uniopen_list = []
+    billing_list = []
+    
+    for bank in banks:
+        db_path = const.BANK_REWARDS_DB_MAP.get(bank)
+        if not db_path:
+            logger.warning(f"⚠️ 找不到銀行 [{bank}] 的資料庫路徑定義，跳過。")
+            continue
             
-            # 2. 讀取 dim_card_rewards_base (附防呆名稱)
-            try:
-                df_base = pd.read_sql_query("SELECT * FROM dim_card_rewards_base", conn)
-            except Exception:
+        if not os.path.exists(db_path):
+            logger.warning(f"⚠️ 銀行 [{bank}] 的資料庫檔案不存在 ({db_path})，跳過。")
+            continue
+            
+        logger.info(f"Connecting to bank [{bank}] config db: {db_path}")
+        try:
+            with sqlite3.connect(db_path) as conn:
+                # 1. 讀取 bridge_reward_rules
                 try:
-                    df_base = pd.read_sql_query("SELECT * FROM dim_reward_base", conn)
+                    df = pd.read_sql_query("SELECT * FROM bridge_reward_rules", conn)
+                    if not df.empty:
+                        rules_list.append(df)
                 except Exception as e:
-                    logger.error(f"Failed to read dim_card_rewards_base or dim_reward_base: {e}")
-                    raise e
-            logger.info("Successfully loaded dim_card_rewards_base table.")
-            
-            # 3. 讀取 dim_card_rewards_campaigns (附防呆名稱)
-            try:
-                df_camp = pd.read_sql_query("SELECT * FROM dim_card_rewards_campaigns", conn)
-            except Exception:
-                try:
-                    df_camp = pd.read_sql_query("SELECT * FROM dim_reward_campaigns", conn)
-                except Exception as e:
-                    logger.error(f"Failed to read dim_card_rewards_campaigns or dim_reward_campaigns: {e}")
-                    raise e
-            logger.info("Successfully loaded dim_card_rewards_campaigns table.")
-            
-            # 型態執法防護
-            df_rules = SchemaEnforcer.enforce(df_rules)
-            df_base = SchemaEnforcer.enforce(df_base)
-            df_camp = SchemaEnforcer.enforce(df_camp)
-            
-            # 打包回傳，確保 Key 匹配運算引擎
-            configs = {
-                'reward_rules': df_rules,
-                'rewards_base': df_base,
-                'rewards_campaigns': df_camp
-            }
-            
-            # 4. 讀取 dim_cards
-            try:
-                df_cards = pd.read_sql_query("SELECT * FROM dim_cards", conn)
-                df_cards = SchemaEnforcer.enforce(df_cards)
-                configs['dim_cards'] = df_cards
-                logger.info(f"Successfully loaded dim_cards table: {df_cards.shape}")
-            except Exception as e:
-                logger.warning(f"⚠️ Failed to read dim_cards from database: {e}")
-                
-            # 5. 讀取 bridge_cube_selections
-            try:
-                df_cube = pd.read_sql_query("SELECT * FROM bridge_cube_selections", conn)
-                df_cube = SchemaEnforcer.enforce(df_cube)
-                configs['bridge_cube_selections'] = df_cube
-                logger.info(f"Successfully loaded bridge_cube_selections table: {df_cube.shape}")
-            except Exception as e:
-                logger.warning(f"⚠️ Failed to read bridge_cube_selections from database: {e}")
-                
-            # 6. 讀取 bridge_unicard_selections
-            try:
-                df_unicard = pd.read_sql_query("SELECT * FROM bridge_unicard_selections", conn)
-                df_unicard = SchemaEnforcer.enforce(df_unicard)
-                configs['bridge_unicard_selections'] = df_unicard
-                logger.info(f"Successfully loaded bridge_unicard_selections table: {df_unicard.shape}")
-            except Exception as e:
-                logger.warning(f"⚠️ Failed to read bridge_unicard_selections from database: {e}")
+                    logger.debug(f"[{bank}] 無法讀取 bridge_reward_rules: {e}")
 
-            # 7. 讀取 bridge_uniopen_visit_spots
-            try:
-                df_uniopen = pd.read_sql_query("SELECT * FROM bridge_uniopen_visit_spots", conn)
-                df_uniopen = SchemaEnforcer.enforce(df_uniopen)
-                configs['bridge_uniopen_visit_spots'] = df_uniopen
-                logger.info(f"Successfully loaded bridge_uniopen_visit_spots table: {df_uniopen.shape}")
-            except Exception as e:
-                logger.warning(f"⚠️ Failed to read bridge_uniopen_visit_spots from database: {e}")
-            
-            # 輸出 tables shape 供除錯驗證
-            logger.info(f"Loaded config shapes -> rules: {df_rules.shape}, base: {df_base.shape}, campaigns: {df_camp.shape}")
-            
-    except Exception as e:
-        logger.error(f"❌ 讀取回饋配置資料庫失敗: {e}", exc_info=True)
-        raise e
-        
+                # 2. 讀取 dim_card_rewards_base
+                try:
+                    df = pd.read_sql_query("SELECT * FROM dim_card_rewards_base", conn)
+                    if not df.empty:
+                        base_list.append(df)
+                except Exception:
+                    try:
+                        df = pd.read_sql_query("SELECT * FROM dim_reward_base", conn)
+                        if not df.empty:
+                            base_list.append(df)
+                    except Exception as e:
+                        logger.debug(f"[{bank}] 無法讀取 dim_card_rewards_base: {e}")
+
+                # 3. 讀取 dim_card_rewards_campaigns
+                try:
+                    df = pd.read_sql_query("SELECT * FROM dim_card_rewards_campaigns", conn)
+                    if not df.empty:
+                        camp_list.append(df)
+                except Exception:
+                    try:
+                        df = pd.read_sql_query("SELECT * FROM dim_reward_campaigns", conn)
+                        if not df.empty:
+                            camp_list.append(df)
+                    except Exception as e:
+                        logger.debug(f"[{bank}] 無法讀取 dim_card_rewards_campaigns: {e}")
+
+                # 4. 讀取 dim_cards
+                try:
+                    df = pd.read_sql_query("SELECT * FROM dim_cards", conn)
+                    if not df.empty:
+                        cards_list.append(df)
+                except Exception as e:
+                    logger.debug(f"[{bank}] 無法讀取 dim_cards: {e}")
+
+                # 5. 讀取 bridge_cube_selections
+                try:
+                    df = pd.read_sql_query("SELECT * FROM bridge_cube_selections", conn)
+                    if not df.empty:
+                        cube_list.append(df)
+                except Exception as e:
+                    logger.debug(f"[{bank}] 無法讀取 bridge_cube_selections: {e}")
+
+                # 6. 讀取 bridge_unicard_selections
+                try:
+                    df = pd.read_sql_query("SELECT * FROM bridge_unicard_selections", conn)
+                    if not df.empty:
+                        unicard_list.append(df)
+                except Exception as e:
+                    logger.debug(f"[{bank}] 無法讀取 bridge_unicard_selections: {e}")
+
+                # 7. 讀取 bridge_uniopen_visit_spots
+                try:
+                    df = pd.read_sql_query("SELECT * FROM bridge_uniopen_visit_spots", conn)
+                    if not df.empty:
+                        uniopen_list.append(df)
+                except Exception as e:
+                    logger.debug(f"[{bank}] 無法讀取 bridge_uniopen_visit_spots: {e}")
+
+                # 8. 讀取 dim_billing_history
+                try:
+                    df = pd.read_sql_query("SELECT * FROM dim_billing_history", conn)
+                    if not df.empty:
+                        billing_list.append(df)
+                except Exception as e:
+                    logger.debug(f"[{bank}] 無法讀取 dim_billing_history: {e}")
+
+        except Exception as e:
+            logger.error(f"❌ 讀取銀行 [{bank}] 回饋配置失敗: {e}", exc_info=True)
+
+    # 合併收集到的資料，並進行 SchemaEnforcer 與去重 (drop_duplicates)
+    def concat_and_clean(df_list, table_name):
+        if not df_list:
+            # 回傳包含對應 schema 的空 DataFrame
+            return pd.DataFrame()
+        df_concat = pd.concat(df_list, ignore_index=True)
+        # 去除重複列 (特別像 "共通" 規則在各資料庫中都會有一份)
+        df_concat = df_concat.drop_duplicates().reset_index(drop=True)
+        return SchemaEnforcer.enforce(df_concat)
+
+    df_rules = concat_and_clean(rules_list, 'bridge_reward_rules')
+    df_base = concat_and_clean(base_list, 'dim_card_rewards_base')
+    df_camp = concat_and_clean(camp_list, 'dim_card_rewards_campaigns')
+    df_cards = concat_and_clean(cards_list, 'dim_cards')
+    df_cube = concat_and_clean(cube_list, 'bridge_cube_selections')
+    df_unicard = concat_and_clean(unicard_list, 'bridge_unicard_selections')
+    df_uniopen = concat_and_clean(uniopen_list, 'bridge_uniopen_visit_spots')
+    df_billing = concat_and_clean(billing_list, 'dim_billing_history')
+
+    configs = {
+        'reward_rules': df_rules,
+        'rewards_base': df_base,
+        'rewards_campaigns': df_camp,
+        'dim_cards': df_cards,
+        'bridge_cube_selections': df_cube,
+        'bridge_unicard_selections': df_unicard,
+        'bridge_uniopen_visit_spots': df_uniopen,
+        'dim_billing_history': df_billing
+    }
+
+    logger.info(f"Loaded config shapes -> rules: {df_rules.shape}, base: {df_base.shape}, campaigns: {df_camp.shape}, billing: {df_billing.shape}")
     return configs
 
 def get_analyzable_data() -> dict:
@@ -177,11 +233,17 @@ def get_analyzable_data() -> dict:
             except Exception as e:
                 logger.warning(f"⚠️ 無法從 const.Bank 讀取 bank_name: {e}")
                 
-            # 2. 取得不重複的卡片名
+            # 2. 取得不重複的卡片名 (依 CSV 的物理順序排序)
             try:
-                cursor.execute("SELECT DISTINCT card_type FROM dim_cards WHERE card_type IS NOT NULL AND card_type != ''")
+                cursor.execute("""
+                    SELECT card_type 
+                    FROM dim_cards 
+                    WHERE card_type IS NOT NULL AND card_type != '' 
+                    GROUP BY card_type 
+                    ORDER BY min(rowid)
+                """)
                 result["cards"] = [row[0] for row in cursor.fetchall()]
-                logger.info(f"🔍 讀取卡片名成功，共 {len(result['cards'])} 筆")
+                logger.info(f"🔍 讀取卡片名成功 (依 rowid 排序)，共 {len(result['cards'])} 筆")
             except Exception as e:
                 logger.warning(f"⚠️ 無法從 dim_cards 讀取 card_type: {e}")
                 

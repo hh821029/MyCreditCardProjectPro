@@ -19,7 +19,8 @@
         <div class="nav-bar">
             <span class="active">🏠 主控制台</span> |
             <a href="sync_config.html">⚙️ 設定同步面板</a> |
-            <a href="rfm_service.html">📊 RFM分析</a>
+            <a href="rfm_service.html">📊 RFM分析</a>|
+            <a href="reward_service.html">💰 回饋計算分析</a>|
         </div>
 
         <!-- 區塊一：帳單資料載入與處理 (ETL) -->
@@ -29,119 +30,11 @@
             </p>
             <div class="button-group">
                 <button id="btnEtl" class="btn-primary" onclick="runTask('etl')">🚀 執行 ETL 流程</button>
+                <button id="btnFetch" class="btn-primary" style="background: linear-gradient(135deg, #ec4899, #8b5cf6);"
+                    onclick="fetchAnalyzableData()">🔍 取得目前可分析資料</button>
                 <button id="btnClear" class="btn-secondary" onclick="clearConsole()">🧹 清空控制台</button>
             </div>
         </div>
-
-        <!-- 區塊二：數據分析與回饋計算 -->
-        <div class="section-box">
-            <div class="section-title">📊 數據分析與回饋計算</div>
-            <p style="margin: 0 0 15px 0; font-size: 13px; color: var(--text-secondary);">呼叫回饋引擎計算各筆交易的現金/紅利回饋，或依條件篩選匯出交易明細。</p>
-
-            <div class="button-group" style="margin-bottom: 20px;">
-                <button id="btnFetch" class="btn-primary" style="background: linear-gradient(135deg, #ec4899, #8b5cf6);"
-                    onclick="fetchAnalyzableData()">🔍 取得目前可分析資料</button>
-                <button id="btnRewards" onclick="runTask('rewards')" disabled>💰 計算回饋金</button>
-                <button id="btnExport" onclick="runTask('query_export')" disabled
-                    style="background: linear-gradient(135deg, #10b981, #059669); border: none;">📥 篩選與匯出 CSV</button>
-            </div>
-
-            <!-- 可分析資料篩選區 (預設隱藏，待資料取得後顯示) -->
-            <div id="filterSection" class="filter-section" style="display: none;">
-                <div class="filter-title">⚙️ 可分析資料篩選設定</div>
-                <div class="filter-container">
-                    <!-- 銀行卡別卡片 -->
-                    <div class="filter-card">
-                        <div class="filter-card-header">
-                            <span>🏦 銀行名稱</span>
-                            <div class="filter-actions">
-                                <span class="filter-link" onclick="toggleAll('bank', true)">全選</span>
-                                <span class="filter-link" onclick="toggleAll('bank', false)">清除</span>
-                            </div>
-                        </div>
-                        <div id="bankList" class="filter-list"></div>
-                    </div>
-
-                    <!-- 信用卡名稱 -->
-                    <div class="filter-card">
-                        <div class="filter-card-header">
-                            <span>💳 卡片名稱</span>
-                            <div class="filter-actions">
-                                <span class="filter-link" onclick="toggleAll('card', true)">全選</span>
-                                <span class="filter-link" onclick="toggleAll('card', false)">清除</span>
-                            </div>
-                        </div>
-                        <div id="cardList" class="filter-list"></div>
-                    </div>
-
-                    <!-- 第三方支付 -->
-                    <div class="filter-card">
-                        <div class="filter-card-header">
-                            <span>📱 第三方支付</span>
-                            <div class="filter-actions">
-                                <span class="filter-link" onclick="toggleAll('payment', true)">全選</span>
-                                <span class="filter-link" onclick="toggleAll('payment', false)">清除</span>
-                            </div>
-                        </div>
-                        <div id="paymentList" class="filter-list"></div>
-                    </div>
-
-                    <!-- 日期與地點篩選 -->
-                    <div class="filter-card">
-                        <div class="filter-card-header">
-                            <span>📅 日期與地點範圍</span>
-                        </div>
-                        <div class="filter-list" style="max-height: none; overflow-y: visible; gap: 8px;">
-                            <!-- 時間區間 Preset Checkboxes -->
-                            <div style="display: flex; flex-direction: column; gap: 4px;">
-                                <span style="font-size: 11px; color: var(--text-secondary); margin-bottom: 2px;">快速時間篩選
-                                    (迄日為今日)</span>
-                                <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 4px;">
-                                    <label class="checkbox-label" style="padding: 2px 4px;">
-                                        <input type="checkbox" name="timePreset" value="LAST_MONTH"
-                                            onchange="handleTimePresetClick(this)"> 近一個月
-                                    </label>
-                                    <label class="checkbox-label" style="padding: 2px 4px;">
-                                        <input type="checkbox" name="timePreset" value="LAST_QUARTER"
-                                            onchange="handleTimePresetClick(this)"> 近一季
-                                    </label>
-                                    <label class="checkbox-label" style="padding: 2px 4px;">
-                                        <input type="checkbox" name="timePreset" value="LAST_HALF_YEAR"
-                                            onchange="handleTimePresetClick(this)"> 近半年
-                                    </label>
-                                    <label class="checkbox-label" style="padding: 2px 4px;">
-                                        <input type="checkbox" name="timePreset" value="LAST_YEAR"
-                                            onchange="handleTimePresetClick(this)"> 近一年
-                                    </label>
-                                </div>
-                            </div>
-                            <!-- 自訂起迄時間 -->
-                            <div style="display: flex; gap: 8px; margin-top: 4px;">
-                                <div style="display: flex; flex-direction: column; gap: 2px; flex: 1;">
-                                    <span style="font-size: 11px; color: var(--text-secondary);">自訂起日</span>
-                                    <input type="date" id="startDate"
-                                        style="background-color: var(--card-bg); border: 1px solid var(--btn-border); border-radius: 4px; padding: 4px 6px; color: var(--text-primary); font-family: var(--font-family); font-size: 12px; width: 100%; box-sizing: border-box;">
-                                </div>
-                                <div style="display: flex; flex-direction: column; gap: 2px; flex: 1;">
-                                    <span style="font-size: 11px; color: var(--text-secondary);">自訂迄日</span>
-                                    <input type="date" id="endDate"
-                                        style="background-color: var(--card-bg); border: 1px solid var(--btn-border); border-radius: 4px; padding: 4px 6px; color: var(--text-primary); font-family: var(--font-family); font-size: 12px; width: 100%; box-sizing: border-box;">
-                                </div>
-                            </div>
-                            <!-- 地點下拉選單 -->
-                            <div style="display: flex; flex-direction: column; gap: 2px; margin-top: 6px;">
-                                <span style="font-size: 11px; color: var(--text-secondary);">地點篩選 (兩碼國家代碼)</span>
-                                <select id="locationSelect"
-                                    style="background-color: var(--card-bg); border: 1px solid var(--btn-border); border-radius: 4px; padding: 4px 6px; color: var(--text-primary); font-family: var(--font-family); font-size: 12px; width: 100%; cursor: pointer;">
-                                    <option value="">全部地區</option>
-                                </select>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
         <!-- 互動狀態引導 -->
         <div id="status" class="status-box">目前狀態：閒置中 (等待指令啟動)</div>
 

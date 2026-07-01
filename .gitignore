@@ -47,12 +47,15 @@ web/*_private.html
 dim_ec_platform.csv
 database/
 issues/*
+errorlog/*
 
 # 忽略測試檔
 *_demo.py
 temp_*.py
 configs/test_*.csv
 pdf_picture_debug.py
+scratch_*.py
+manualbook.md
 
 # 忽略分析結果檔、分析過程產生的中間檔
 refined_all_banks.csv

@@ -282,6 +282,31 @@ button:disabled {
     box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
 }
 
+/* 隱藏 details 原生的箭頭 */
+.filter-card details summary {
+    list-style: none;
+    outline: none;
+    cursor: pointer;
+    user-select: none;
+}
+.filter-card details summary::-webkit-details-marker {
+    display: none;
+}
+
+/* 自訂三角箭頭樣式與動畫 */
+.filter-card .arrow-icon {
+    display: inline-block;
+    transition: transform 0.2s ease-in-out;
+    margin-right: 6px;
+    font-size: 10px;
+    color: var(--text-secondary);
+    vertical-align: middle;
+}
+
+.filter-card details[open] .arrow-icon {
+    transform: rotate(90deg);
+}
+
 .filter-card-header {
     display: flex;
     justify-content: space-between;
@@ -289,8 +314,19 @@ button:disabled {
     font-size: 13px;
     font-weight: 600;
     color: var(--text-primary);
-    margin-bottom: 12px;
+}
+
+/* 當 details 摺疊時不顯示底線與下方邊距 */
+.filter-card details .filter-card-header {
+    border-bottom: none;
+    margin-bottom: 0;
+    padding-bottom: 0;
+}
+
+/* 當 details 展開時顯示底線與下方邊距 */
+.filter-card details[open] .filter-card-header {
     border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    margin-bottom: 12px;
     padding-bottom: 8px;
 }
 

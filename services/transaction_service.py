@@ -1,4 +1,5 @@
 import sqlite3
+import os
 import pandas as pd
 import logging
 from typing import Optional, List
@@ -74,7 +75,8 @@ def query_transactions_modular(
     end_date: Optional[str] = None,
     location: Optional[str] = None,
     exclude_non_retail: bool = False,
-    db_path: str = const.DB_PATH
+    db_path: str = const.DB_PATH,
+    limit_by_card_start: bool = False
 ) -> pd.DataFrame:
     """
     動態 SQL 條件查詢服務 (支援銀行、卡片、支付方式、預設/自訂時間與國別篩選)
@@ -92,8 +94,48 @@ def query_transactions_modular(
         f"CAST(payment_amount AS REAL) AS {const.COL_PAY_AMOUNT}",
         f"CAST(card_type AS TEXT) AS {const.COL_CARD_TYPE}",
         f"bank_name AS {const.COL_BANK_NAME}",
-        f"transaction_type AS {const.COL_TXN_TYPE}"
+        f"transaction_type AS {const.COL_TXN_TYPE}",
+        f"statement_month AS {const.COL_STAT_MON}"
     ]
+
+    # 1.5. 限制交易日期必須在啟用卡片起始日之後
+    if limit_by_card_start:
+        # 決定要讀取的設定資料庫
+        # 全選勾選 或 未指定：使用主設定庫 TransactionsConfigs.db
+        is_all_banks = not banks or len(banks) == len(const.BANK_REWARDS_DB_MAP)
+        
+        min_start_date = None
+        
+        if is_all_banks:
+            config_db = const.CONFIGS_DB_PATH
+            try:
+                with sqlite3.connect(config_db) as cfg_conn:
+                    row = cfg_conn.execute("SELECT min(card_start_date) FROM dim_cards WHERE card_start_date IS NOT NULL AND card_start_date != ''").fetchone()
+                    if row and row[0]:
+                        min_start_date = str(row[0]).split()[0]
+            except Exception as e:
+                logger.error(f"❌ 查詢啟用卡片最小起始日失敗 (主設定庫: {config_db}): {e}")
+        else:
+            # 勾選一個或多個：從這些被勾選的銀行專屬分區資料庫中查找
+            min_dates = []
+            for b in banks:
+                b_clean = b.strip().lower()
+                if b_clean in const.BANK_REWARDS_DB_MAP:
+                    config_db = const.BANK_REWARDS_DB_MAP[b_clean]
+                    try:
+                        with sqlite3.connect(config_db) as cfg_conn:
+                            row = cfg_conn.execute("SELECT min(card_start_date) FROM dim_cards WHERE card_start_date IS NOT NULL AND card_start_date != ''").fetchone()
+                            if row and row[0]:
+                                min_dates.append(str(row[0]).split()[0])
+                    except Exception as e:
+                        logger.error(f"❌ 查詢啟用卡片最小起始日失敗 (分區庫: {config_db}): {e}")
+            if min_dates:
+                min_start_date = min(min_dates)
+            
+        if min_start_date:
+            conditions.append("transaction_date >= :card_start_min")
+            params["card_start_min"] = min_start_date
+            logger.info(f"📅 [卡片啟用日限縮] 設定交易日期上限必須 >= {min_start_date}")
 
     # 2. 處理時間區間 (預設時間區間優先)
     # 動態獲取最新交易日作為 anchor_date，以防止記帳數據落後當下系統時間造成的空白查詢
@@ -178,4 +220,4 @@ def query_transactions_modular(
             return df
     except Exception as e:
         logger.error(f"❌ 條件查詢交易資料庫失敗: {e}", exc_info=True)
-        return pd.DataFrame()
+        return pd.DataFrame()

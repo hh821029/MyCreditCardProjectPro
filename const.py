@@ -266,14 +266,14 @@ class SmartCardType(Enum):
     
 
 class Bank(Enum):
-    ESUN = ('esun','808','玉山',['玉山','esun'])
-    CATHAY = ('cube','013','國泰',['國泰','國泰世華','cathay','cube','CUBE'])
-    CTBC = ('ctbc','822','中信',['中信','中國信託','ctbc','中國信託商業銀行'])
-    HNCB = ('hncb','008','華南',['華南','hncb'])
-    SINOPAC = ('sinopac','807','永豐',['永豐','DAWHO','DAWAY','sinopac'])
-    TAISHIN = ('taishin','812','台新',['台新','taishin','RICHART'])
-    FUBON = ('fubon','012','富邦',['富邦','fubon','台北富邦','北富銀'])
-    FCBK = ('fcbk','007','第一',['第一','第一銀行','fcbk','FCBK','firstbank'])
+    ESUN = ('esun','808','玉山',['ESUN','玉山','esun','unicard'])
+    CATHAY = ('cube','013','國泰',['CATHAY','國泰','國泰世華','cathay','cube','CUBE'])
+    CTBC = ('ctbc','822','中信',['CTBC','中信','中國信託','ctbc','中國信託商業銀行','uniopen'])
+    HNCB = ('hncb','008','華南',['HNCB','華南','hncb'])
+    SINOPAC = ('sinopac','807','永豐',['SINOPAC','永豐','DAWHO','DAWAY','sinopac'])
+    TAISHIN = ('taishin','812','台新',['TAISHIN','台新','taishin','RICHART'])
+    FUBON = ('fubon','012','富邦',['FUBON','富邦','fubon','台北富邦','北富銀'])
+    FCBK = ('fcbk','007','第一',['FCBK','第一','第一銀行','fcbk','firstbank'])
 
     @property
     def bank_id(self):
@@ -442,6 +442,8 @@ COL_TXN_DATE = TransactionColumn.TXN_DATE.col_name
 COL_POST_DATE = TransactionColumn.POST_DATE.col_name
 COL_CONV_DATE = TransactionColumn.CONV_DATE.col_name
 COL_STAT_MON = TransactionColumn.STAT_MON.col_name
+COL_CLOSING_DATE = TransactionColumn.CLOSING_DATE.col_name
+COL_ACT_CLOSING_DATE = TransactionColumn.ACT_CLOSING_DATE.col_name
 
 # 商店消費資訊
 COL_MERCHANT = TransactionColumn.MERCHANT.col_name
@@ -542,10 +544,32 @@ OUTPUT_DIR = os.path.join(ROOT_DIR, 'output')      # 輸出區
 CONFIG_DIR = os.path.join(ROOT_DIR, 'configs')     # 規則設定檔區
 DATABASE_DIR = os.path.join(ROOT_DIR, 'database')   # 資料庫區
 
-# 資料庫路徑 (雙資料庫獨立設計)
+# 資料庫路徑 (多資料庫獨立設計)
 TRANSACTIONS_DB_PATH = os.path.join(DATABASE_DIR, 'TransactionsBills.db')
 CONFIGS_DB_PATH = os.path.join(DATABASE_DIR, 'TransactionsConfigs.db')
 ANALYSIS_DB_PATH = os.path.join(OUTPUT_DIR, 'TransactionsAnalysis.db')
+REWARDS_CONFIGS_MOCK_DB_PATH = os.path.join(DATABASE_DIR, 'RewardsConfigs_mock.db')
+REWARDS_CONFIGS_ESUN_DB_PATH = os.path.join(DATABASE_DIR, 'RewardsConfigs_esun.db')
+REWARDS_CONFIGS_CUBE_DB_PATH = os.path.join(DATABASE_DIR, 'RewardsConfigs_cube.db')
+REWARDS_CONFIGS_CTBC_DB_PATH = os.path.join(DATABASE_DIR, 'RewardsConfigs_ctbc.db')
+REWARDS_CONFIGS_HNCB_DB_PATH = os.path.join(DATABASE_DIR, 'RewardsConfigs_hncb.db')
+REWARDS_CONFIGS_SINOPAC_DB_PATH = os.path.join(DATABASE_DIR, 'RewardsConfigs_sinopac.db')
+REWARDS_CONFIGS_TAISHIN_DB_PATH = os.path.join(DATABASE_DIR, 'RewardsConfigs_taishin.db')
+REWARDS_CONFIGS_FUBON_DB_PATH = os.path.join(DATABASE_DIR, 'RewardsConfigs_fubon.db')
+REWARDS_CONFIGS_FCBK_DB_PATH = os.path.join(DATABASE_DIR, 'RewardsConfigs_fcbk.db')
+
+# 各銀行回饋設定資料庫映射對照表 (O(1) 複雜度定位)
+BANK_REWARDS_DB_MAP = {
+    'esun': REWARDS_CONFIGS_ESUN_DB_PATH,
+    'cube': REWARDS_CONFIGS_CUBE_DB_PATH,
+    'ctbc': REWARDS_CONFIGS_CTBC_DB_PATH,
+    'hncb': REWARDS_CONFIGS_HNCB_DB_PATH,
+    'sinopac': REWARDS_CONFIGS_SINOPAC_DB_PATH,
+    'taishin': REWARDS_CONFIGS_TAISHIN_DB_PATH,
+    'fubon': REWARDS_CONFIGS_FUBON_DB_PATH,
+    'fcbk': REWARDS_CONFIGS_FCBK_DB_PATH,
+    'mock': REWARDS_CONFIGS_MOCK_DB_PATH,
+}
 
 # 向後相容別名：指向主要交易資料庫，避免專案其他地方崩潰
 DB_PATH = TRANSACTIONS_DB_PATH

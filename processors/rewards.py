@@ -4,7 +4,7 @@ import logging
 import re
 import yaml
 import os
-from datetime import datetime
+import datetime
 from typing import Dict, Optional, List
 import const
 
@@ -65,6 +65,12 @@ class RewardsCalculator:
         self._load_external_configs()
         self._load_selections()
         self._load_card_enable_status()
+        
+        # 載入並預處理對帳單歷史 (用於結帳日一致性校驗)
+        self.df_billing = self.configs.get('dim_billing_history', pd.DataFrame())
+        if not self.df_billing.empty:
+            from services.billing_service import preprocess_billing_history
+            self.df_billing = preprocess_billing_history(self.df_billing)
 
     def _load_external_configs(self):
         """載入外部 YAML 商家清單 (如 NCCC, 通用排除名單)"""
@@ -231,7 +237,7 @@ class RewardsCalculator:
             
             # 只保留關聯到 Base 的規則 (join on rules_reward_program = base_reward_program)
             base_rules = bridge.merge(
-                base_dim[['base_reward_program', 'bank_name', 'card_type', 'cap_amount', 'calc_method', 'round_strategy', 'start_date', 'end_date', 'base_reward_rate']],
+                base_dim[['base_reward_program', 'bank_name', 'card_type', 'cap_amount', 'calc_method', 'round_strategy', 'start_date', 'end_date', 'base_reward_rate', 'reward_type']],
                 left_on='rules_reward_program',
                 right_on='base_reward_program',
                 how='inner',
@@ -287,7 +293,7 @@ class RewardsCalculator:
             
             # 只保留關聯到 Campaign 的規則
             camp_rules = bridge.merge(
-                camp_dim[['campaign_reward_program', 'bank_name', 'card_type', 'cap_amount', 'calc_method', 'round_strategy', 'start_date', 'end_date', 'campaign_reward_rate']],
+                camp_dim[['campaign_reward_program', 'bank_name', 'card_type', 'cap_amount', 'calc_method', 'round_strategy', 'start_date', 'end_date', 'campaign_reward_rate', 'reward_type']],
                 left_on='rules_reward_program',
                 right_on='campaign_reward_program',
                 how='inner',
@@ -573,7 +579,39 @@ class RewardsCalculator:
         return f"規則'{first_rule.get('rules_reward_program')}' 不符: 請檢查日期/卡片/支付方式/商家條件"
 
 
-    def process(self, df_bills: pd.DataFrame) -> pd.DataFrame:
+    def _round_reward(self, raw_reward: float, reward_type_str: Optional[str]) -> float:
+        """輔助函式：根據回饋類型的捨入策略進行運算"""
+        if pd.isna(reward_type_str) or not reward_type_str:
+            reward_type_str = 'CASHBACK_FLOOR'
+            
+        reward_type_str = reward_type_str.strip()
+        try:
+            rt = const.RewardType[reward_type_str]
+        except (KeyError, AttributeError):
+            rt = const.RewardType.CASHBACK_FLOOR
+            
+        rounding = rt.rounding_strategy
+        digits = rt.rounding_digits
+        
+        if rounding == 'floor':
+            if digits == 0:
+                return float(np.floor(raw_reward))
+            else:
+                factor = 10 ** digits
+                return float(np.floor(raw_reward * factor) / factor)
+        elif rounding == 'ceil':
+            if digits == 0:
+                return float(np.ceil(raw_reward))
+            else:
+                factor = 10 ** digits
+                return float(np.ceil(raw_reward * factor) / factor)
+        else: # round
+            if digits == 0:
+                return float(np.round(raw_reward))
+            else:
+                return float(np.round(raw_reward, digits))
+
+    def process(self, df_bills: pd.DataFrame, enable_billing_validation: bool = True) -> pd.DataFrame:
         """
         主處理流程 (V2: 全局 Priority Waterfall)
         
@@ -597,7 +635,15 @@ class RewardsCalculator:
                 logger.warning(f"⚠️ 缺少欄位: {col}")
                 df[col] = ''
         
-        optional_cols = [const.COL_MOBILE_PAY, const.COL_VPC_NO, const.COL_VPC_TYPE]
+        # === 結帳日一致性校驗 ===
+        if enable_billing_validation and hasattr(self, 'df_billing') and not self.df_billing.empty:
+            from services.billing_service import validate_billing_consistency
+            applied_closes = validate_billing_consistency(df, self.df_billing)
+            df['actual_closing_date_applied'] = applied_closes
+        else:
+            df['actual_closing_date_applied'] = ''
+
+        optional_cols = [const.COL_MOBILE_PAY, const.COL_VPC_NO, const.COL_VPC_TYPE, const.COL_EC_PLATFORM]
         for col in optional_cols:
             if col not in df.columns:
                 df[col] = ''
@@ -620,6 +666,9 @@ class RewardsCalculator:
         # === Phase 1: 卡片啟用檢查 ===
         df['_should_calculate'] = df[const.COL_CARD_TYPE].apply(lambda card: self._should_calculate_reward(card))
         
+        # === 初始化活動回饋累計器 ===
+        campaign_accumulators = {}
+
         # === Phase 3: 全局 Priority 執行（all_rules_master 已按 priority 排序）===
         if self.all_rules_master.empty:
             logger.warning("⚠️ all_rules_master 為空，跳過回饋計算。")
@@ -655,12 +704,57 @@ class RewardsCalculator:
                     df.loc[empty_base_mask, 'matched_base_rule'] = rule.get('rules_reward_program', '')
                     df.loc[empty_base_mask, 'base_rule_rate'] = f"{rate*100:.2f}%"
             elif rule.get('is_campaign_rule'):
-                # 追踪 Campaign（支援堆疊）
-                details_series = df.loc[matched_mask, '_campaign_details']
-                if isinstance(details_series, pd.Series):
-                    df.loc[matched_mask, '_campaign_details'] = details_series.apply(
-                        lambda x: x + [f"{rule.get('rules_reward_program')}({rate*100:.0f}%)"] if isinstance(x, list) else [f"{rule.get('rules_reward_program')}({rate*100:.0f}%)"]
-                    )
+                # 追踪 Campaign（支援堆疊與上限控管）
+                campaign_name = rule.get('rules_reward_program', '')
+                cap_val = rule.get('cap_amount')
+                reward_type = rule.get('reward_type')
+                
+                # 檢查上限是否啟用
+                has_cap = pd.notna(cap_val) and cap_val > 0
+                
+                for idx in df[matched_mask].index:
+                    payment_amount = df.loc[idx, const.COL_PAY_AMOUNT]
+                    raw_reward = payment_amount * rate
+                    rounded_reward = self._round_reward(raw_reward, reward_type)
+                    
+                    is_capped = False
+                    if has_cap and enable_billing_validation:
+                        bank = str(df.loc[idx, const.COL_BANK_NAME]).strip().lower()
+                        card = str(df.loc[idx, const.COL_CARD_TYPE]).strip().lower()
+                        sm_val = df.loc[idx, const.COL_STAT_MON]
+                        sm = pd.to_datetime(sm_val).strftime('%Y-%m') if pd.notna(sm_val) else 'unknown'
+                        group_key = (bank, card, sm, campaign_name)
+                        
+                        current_accumulated = campaign_accumulators.get(group_key, 0.0)
+                        remaining_cap = max(0.0, cap_val - current_accumulated)
+                        
+                        if rounded_reward > remaining_cap:
+                            actual_reward = remaining_cap
+                            is_capped = True
+                        else:
+                            actual_reward = rounded_reward
+                            
+                        campaign_accumulators[group_key] = current_accumulated + actual_reward
+                    else:
+                        actual_reward = rounded_reward
+                        
+                    # 計算實際顯示費率
+                    if is_capped:
+                        if actual_reward == 0.0:
+                            rate_str = "0%_已達上限"
+                        else:
+                            actual_rate = (actual_reward / payment_amount) if payment_amount > 0 else 0.0
+                            rate_pct = actual_rate * 100
+                            rate_str = f"{rate_pct:.1f}%_部分折抵" if rate_pct % 1 != 0 else f"{rate_pct:.0f}%_部分折抵"
+                    else:
+                        orig_pct = rate * 100
+                        rate_str = f"{orig_pct:.1f}%" if orig_pct % 1 != 0 else f"{orig_pct:.0f}%"
+                        
+                    # 追加詳情
+                    current_details = df.loc[idx, '_campaign_details']
+                    if not isinstance(current_details, list):
+                        current_details = []
+                    df.at[idx, '_campaign_details'] = current_details + [f"{campaign_name}({rate_str})"]
             
             # Break 邏輯（全局範圍）
             if str(rule.get('reward_cal_break')).upper() == 'TRUE':
@@ -725,7 +819,7 @@ class RewardsCalculator:
             output_dir = const.OUTPUT_DIR
         
         # 準備輸出表
-        output_df = df[[
+        cols_to_keep = [
             const.COL_CARD_TYPE,
             const.COL_TXN_DATE,
             const.COL_MERCHANT_DISPLAY,
@@ -735,10 +829,8 @@ class RewardsCalculator:
             'base_rule_rate',
             'matched_campaigns',
             'is_bypassed'
-        ]].copy()
-        
-        # 重新命名欄位以便對照
-        output_df.columns = [
+        ]
+        col_names = [
             'card_type',
             'transaction_date',
             'merchant_display',
@@ -749,6 +841,20 @@ class RewardsCalculator:
             'matched_campaigns',
             'is_bypassed'
         ]
+        
+        # 新增診斷欄位
+        if const.COL_EC_PLATFORM in df.columns:
+            cols_to_keep.append(const.COL_EC_PLATFORM)
+            col_names.append('ec_platform')
+        if const.COL_STAT_MON in df.columns:
+            cols_to_keep.append(const.COL_STAT_MON)
+            col_names.append('statement_month')
+        if 'actual_closing_date_applied' in df.columns:
+            cols_to_keep.append('actual_closing_date_applied')
+            col_names.append('actual_closing_date_applied')
+            
+        output_df = df[cols_to_keep].copy()
+        output_df.columns = col_names
         
         # 新增失敗原因欄位
         output_df['failure_reason'] = ''
@@ -763,7 +869,9 @@ class RewardsCalculator:
             )
         
         # 輸出 CSV
-        output_path = os.path.join(output_dir, 'reward_calculation_detailed.csv')
+        timestamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
+        output_filename = f"reward_calculation_detailed_{timestamp}.csv"
+        output_path = os.path.join(output_dir, output_filename)
         os.makedirs(output_dir, exist_ok=True)
         output_df.to_csv(output_path, index=False, encoding='utf-8-sig')
         logger.info(f"✅ 詳細除錯表已輸出至: {output_path}")

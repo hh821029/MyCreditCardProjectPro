@@ -25,6 +25,8 @@ data/
 excel_files/
 database/
 manualbook.md
+GEMINI.md
+README.md
 
 # 5. 忽略試算表檔案
 *.xlsx

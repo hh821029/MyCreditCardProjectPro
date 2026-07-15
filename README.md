@@ -139,10 +139,12 @@ My-Credit-Card-ETL/
 │   └── server.py               # [本機端伺服器] 
 │ 
 ├── services/                   # [服務層] 負責呼叫服務對應的解析層、處理層
-│   ├── config_service.py       # 服務：帳單關聯設定產生DB資料庫        
+│   ├── billing_service.py      # 服務：帳單關聯設定檢查
+│   ├── config_service.py       # 服務：帳單關聯，提取分析帳單的相關設定資料        
 │   ├── etl_service.py          # 服務：帳單資料清洗並產生SQLite資料庫
-│   ├── analysis_service.py     # 服務：從SQLite資料庫提取RFM分析要用的基本資料，並產生多視角報表
-│   └── reward_service.py       # 服務：從SQLite資料庫提取回饋計算要用的資料
+│   ├── rfm_service.py          # 服務：從SQLite資料庫提取RFM分析要用的資料，並產生多視角報表
+│   ├── reward_service.py       # 服務：從SQLite資料庫提取回饋計算要用的資料
+│   └── transaction_service.py  # 服務：提取符合條件的交易資料
 │  
 ├── parsers/                    # [解析層] 負責各銀行原始帳單轉為標準 DataFrame
 │   ├── base.py                 # Parser 基類，定義統一介面
@@ -174,17 +176,25 @@ My-Credit-Card-ETL/
 │
 ├── configs/                            # [設定檔資料夾] 
 │   ├── db_columns_mapping.py           # [設定檔] 資料庫欄位映射定義
-│   ├── dim_cards.csv                   # [設定檔] 真實卡號放置地點(已提供可直接讀取的範例檔)
+│   ├── dim_cards.csv                   # [設定檔] 真實卡號放置地點(已在 .gitignore)
 │   ├── transaction_types.yaml          # [設定檔] 銀行交易類別，排除持卡人跟銀行的交易像繳款、折抵/回饋、費用(手續費/服務費)(公開)
-│   ├── dim_merchants.csv               # [設定檔] 真實交易地點，使用Regex(正則表達式)-Replacement來清洗消費明細(部分公開)
+│   ├── dim_category.yaml               # [設定檔] 商家分類
+│   ├── dim_merchants.csv               # [設定檔] 交易地點，使用Regex(正則表達式)-Replacement來清洗消費明細
+│   ├── dim_ec_platforms.csv            # [設定檔] 電商平台，使用Regex(正則表達式)-Replacement來清洗消費明細
 │   ├── dim_payment_process.csv         # [設定檔] 支付/處理流程，使用Regex(正則表達式)-Replacement來整理支付通路(公開)
-│   ├── dim_card_rewards_base.csv       # [設定檔] 基本回饋設定(已在 .gitignore )
+│   ├── dim_card_rewards_base.csv       # [設定檔] 基本回饋設定(已在 .gitignore)
 │   ├── dim_card_rewards_campaigns.csv  # [設定檔] 消費活動回饋設定(已在 .gitignore)
 │   ├── bridge_reward_rules.csv         # [設定檔] 基本回饋設定橋接表(已在 .gitignore)
-│   └── bridge_cube_selections.csv      # [設定檔] Cube權益切換橋接表(已在 .gitignore)
+│   ├── bridge_cube_selections.csv      # [設定檔] Cube權益切換橋接表(已在 .gitignore)
+│   ├── dim_FX_Table.csv                # [設定檔] 銀行外幣牌告匯率表，供外幣消費回饋計算使用
+│   └── dim_billing_history.csv         # [設定檔] 結帳日歷史資料，回饋計算參考資料
 │
 ├── data/                       # [帳單csv放置處] 真實的 CSV 帳單放這邊。
 │   └── (各銀行帳單)
+│
+├── database/                   # [資料庫放置處] 真實的 SQLite 資料庫放這邊。
+│   └── (Bills.db、Configs.db)
+│
 └── output/                     # [輸出區] 存放 Bills.db、Configs.db 與 分析報表 (已在 .gitignore)
 
 ```
